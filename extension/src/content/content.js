@@ -134,11 +134,36 @@
     }
 
     if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-      await chrome.storage.local.set({
-        lastViewedModule: {
-          rawData: enrichedData,
-          evaluation,
-          timestamp: Date.now()
+      try {
+        const { recentModules = [] } = await chrome.storage.local.get('recentModules');
+        const updatedRecent = [
+          {
+            machineName: enrichedData.machineName,
+            title: enrichedData.title,
+            score: evaluation.score,
+            gradeColor: evaluation.gradeColor,
+            timestamp: Date.now()
+          },
+          ...recentModules.filter(m => m.machineName !== enrichedData.machineName)
+        ].slice(0, 10);
+
+        await chrome.storage.local.set({
+          lastViewedModule: {
+            rawData: enrichedData,
+            evaluation,
+            timestamp: Date.now()
+          },
+          recentModules: updatedRecent
+        });
+      } catch {}
+    }
+
+    if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+      chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message.type === 'DROPTRENDS_OPEN_DRAWER') {
+          const success = DropTrendsUI.openDrawer();
+          sendResponse({ success });
+          return true;
         }
       });
     }

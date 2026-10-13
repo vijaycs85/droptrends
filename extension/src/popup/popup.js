@@ -40,12 +40,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     'issues', 'usage', 'releases', 'comments', 'search', 'user'
   ];
   let isDrupalProject = false;
+  let isExcluded = false;
+  let currentProjectMachine = null;
+
   if (currentTab?.url && currentTab.url.includes('drupal.org/project/')) {
     try {
       const urlObj = new URL(currentTab.url);
       const urlParts = urlObj.pathname.split('/').filter(Boolean);
-      if (urlParts.length === 2 && urlParts[0] === 'project' && !SYSTEM_PATHS.includes(urlParts[1].toLowerCase())) {
-        isDrupalProject = true;
+      if (urlParts.length === 2 && urlParts[0] === 'project') {
+        const candidate = urlParts[1].toLowerCase();
+        if (SYSTEM_PATHS.includes(candidate)) {
+          isExcluded = true;
+        } else {
+          isDrupalProject = true;
+          currentProjectMachine = candidate;
+        }
       }
     } catch {}
   }
@@ -77,7 +86,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       pillarQual.textContent = `${evaluation.pillars.quality.score}/15`;
       pillarAdopt.textContent = `${evaluation.pillars.adoption.score}/15`;
 
-      openPageBtn.addEventListener('click', () => {
+      openPageBtn.addEventListener('click', async () => {
+        let drawerOpened = false;
+        if (currentTab?.id && isDrupalProject) {
+          try {
+            const res = await chrome.tabs.sendMessage(currentTab.id, { type: 'DROPTRENDS_OPEN_DRAWER' });
+            if (res && res.success) {
+              drawerOpened = true;
+            }
+          } catch {}
+        }
+
+        if (!drawerOpened) {
+          const url = `https://www.drupal.org/project/${rawData.machineName}`;
+          if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+            await chrome.tabs.create({ url });
+          } else {
+            window.open(url, '_blank');
+          }
+        }
         window.close();
       });
       return;
@@ -95,19 +122,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  searchForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const query = searchInput.value.trim().toLowerCase().replace(/[^a-z0-9_\-]/g, '');
+  // Focus search input
+  if (searchInput) {
+    setTimeout(() => searchInput.focus(), 50);
+  }
+
+  const handleSearch = async (e) => {
+    if (e) e.preventDefault();
+    let raw = searchInput.value.trim().toLowerCase();
+    if (!raw) return;
+
+    // Handle full URLs like https://www.drupal.org/project/token
+    if (raw.includes('drupal.org/project/')) {
+      try {
+        const parsed = new URL(raw.startsWith('http') ? raw : `https://${raw}`);
+        const parts = parsed.pathname.split('/').filter(Boolean);
+        if (parts.length >= 2 && parts[0] === 'project') {
+          raw = parts[1];
+        }
+      } catch {}
+    }
+    // Handle composer syntax like drupal/token
+    if (raw.startsWith('drupal/')) {
+      raw = raw.replace(/^drupal\//, '');
+    }
+
+    const query = raw.replace(/[^a-z0-9_\-]/g, '');
     if (query) {
       const url = `https://www.drupal.org/project/${query}`;
       if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
-        chrome.tabs.create({ url });
+        await chrome.tabs.create({ url });
       } else {
         window.open(url, '_blank');
       }
       window.close();
     }
-  });
+  };
+
+  searchForm.addEventListener('submit', handleSearch);
 
   // Load recently viewed modules if available
   if (typeof chrome !== 'undefined' && chrome.storage?.local) {
@@ -132,12 +184,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         li.appendChild(spanName);
         li.appendChild(spanScore);
 
-        li.addEventListener('click', () => {
-          chrome.tabs.create({ url: `https://www.drupal.org/project/${mod.machineName}` });
+        li.addEventListener('click', async () => {
+          const url = `https://www.drupal.org/project/${mod.machineName}`;
+          if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+            await chrome.tabs.create({ url });
+          } else {
+            window.open(url, '_blank');
+          }
           window.close();
         });
         recentList.appendChild(li);
       }
     }
   }
+
+  // Intercept any external links to open properly across all browsers
+  document.querySelectorAll('a[href^="http"]').forEach(a => {
+    a.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const href = a.getAttribute('href');
+      if (href) {
+        if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+          await chrome.tabs.create({ url: href });
+        } else {
+          window.open(href, '_blank');
+        }
+        window.close();
+      }
+    });
+  });
 });

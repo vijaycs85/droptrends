@@ -16,6 +16,22 @@ class DropTrendsUI {
   }
 
   /**
+   * Programmatically opens the slide-out detail drawer.
+   * @returns {boolean} True if drawer was found and opened.
+   */
+  static openDrawer() {
+    const root = document.getElementById('droptrends-root');
+    if (!root || !root.shadowRoot) return false;
+    const modal = root.shadowRoot.querySelector('.dt-modal-overlay');
+    if (modal) {
+      modal.classList.add('dt-active');
+      document.body.style.overflow = 'hidden';
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Mounts DropTrends UI to the page.
    * @param {Object} rawData - Extracted module data
    * @param {Object} evaluation - Evaluated DropScore report
