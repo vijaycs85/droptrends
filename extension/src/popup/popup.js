@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const titleEl = document.getElementById('dt-module-title');
   const machineEl = document.getElementById('dt-module-machine');
-  const scorePill = document.getElementById('dt-score-pill');
+  const scoreCircle = document.getElementById('dt-score-circle');
   const scoreVal = document.getElementById('dt-score-val');
   const scoreLabel = document.getElementById('dt-score-label');
   const secTag = document.getElementById('dt-sec-tag');
@@ -71,9 +71,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       titleEl.textContent = rawData.title;
       machineEl.textContent = `drupal/${rawData.machineName}`;
 
-      scoreVal.textContent = evaluation.score;
-      if (scoreLabel) scoreLabel.textContent = evaluation.gradeLabel;
-      scorePill.style.backgroundColor = evaluation.gradeColor;
+      const score = typeof evaluation.score === 'number' ? evaluation.score : 0;
+      const gradeColor = evaluation.gradeColor || '#0284c7';
+      const gradeLabel = evaluation.gradeLabel || 'Evaluated';
+
+      if (scoreVal) {
+        scoreVal.textContent = score;
+        scoreVal.style.color = gradeColor;
+      }
+
+      if (scoreCircle) {
+        const circumference = 131.95;
+        const dashoffset = circumference - (Math.max(0, Math.min(100, score)) / 100) * circumference;
+        scoreCircle.style.stroke = gradeColor;
+        scoreCircle.style.strokeDashoffset = dashoffset.toFixed(2);
+      }
+
+      if (scoreLabel) {
+        scoreLabel.textContent = gradeLabel;
+        scoreLabel.style.backgroundColor = gradeColor;
+      }
 
       secTag.textContent = rawData.isSecurityCovered ? 'Security Covered' : 'No Shield';
       secTag.className = rawData.isSecurityCovered ? 'dt-tag dt-tag-sec' : 'dt-tag dt-tag-warn';

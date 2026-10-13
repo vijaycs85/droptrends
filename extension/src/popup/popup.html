@@ -29,13 +29,21 @@
       <section id="dt-active-view" class="dt-view dt-hidden">
         <div class="dt-card">
           <div class="dt-card-header">
-            <div>
+            <div class="dt-header-title-block">
               <h2 id="dt-module-title" class="dt-module-title">Token</h2>
               <span id="dt-module-machine" class="dt-module-machine">drupal/token</span>
             </div>
-            <div id="dt-score-pill" class="dt-score-pill">
-              <span id="dt-score-val" class="dt-score-val">96</span>
-              <span id="dt-score-label" class="dt-score-label">Exceptional</span>
+            <div class="dt-hero-score-lockup">
+              <div class="dt-hero-gauge-dial">
+                <svg class="dt-hero-gauge-svg" width="50" height="50" viewBox="0 0 50 50">
+                  <circle class="dt-gauge-bg" cx="25" cy="25" r="21" fill="none" stroke="#e2e8f0" stroke-width="3.8"/>
+                  <circle id="dt-score-circle" class="dt-gauge-arc" cx="25" cy="25" r="21" fill="none" stroke="#059669" stroke-width="3.8"
+                    stroke-dasharray="131.95" stroke-dashoffset="5.28"
+                    stroke-linecap="round" transform="rotate(-90 25 25)"/>
+                </svg>
+                <span id="dt-score-val" class="dt-hero-score-val">96</span>
+              </div>
+              <span id="dt-score-label" class="dt-hero-grade-chip">Exceptional</span>
             </div>
           </div>
 

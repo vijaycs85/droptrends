@@ -87,6 +87,15 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 12px;
+}
+
+.dt-header-title-block {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .dt-module-title {
@@ -94,32 +103,73 @@ body {
   font-size: 16px;
   font-weight: 700;
   color: var(--text-main);
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dt-module-machine {
   font-family: ui-monospace, SFMono-Regular, monospace;
   font-size: 11px;
   color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.dt-score-pill {
+/* Lighthouse Hero Score Circle Lockup */
+.dt-hero-score-lockup {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 4px;
-  background: #10b981;
-  color: #ffffff;
-  padding: 3px 8px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.dt-hero-gauge-dial {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 9999px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.dt-hero-gauge-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 9999px;
+}
+
+.dt-hero-score-val {
+  position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 18px;
   font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  z-index: 1;
 }
 
-.dt-score-val {
-  font-size: 14px;
-}
-
-.dt-score-grade {
-  font-size: 11px;
-  opacity: 0.9;
+.dt-hero-grade-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1.5px 7px;
+  border-radius: 9999px;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .dt-meta-row {
