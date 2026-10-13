@@ -62,19 +62,23 @@ English
 
 ## 2. Graphics & Assets
 
-| Asset | Dimensions | Status | Filename / Path |
-| :--- | :--- | :--- | :--- |
-| Store Icon [REQUIRED] | 128×128 PNG | ✅ Ready | `extension/icons/icon-128.png` |
-| Screenshot 1 [REQUIRED] | 1280×800 PNG | 🟡 Needs capture | Showing on-page DropScore pill & open detail drawer on Drupal.org |
-| Screenshot 2 [RECOMMENDED] | 1280×800 PNG | 🟡 Needs capture | Showing multi-release selector and Composer command copy |
-| Screenshot 3 [RECOMMENDED] | 1280×800 PNG | 🟡 Needs capture | Showing toolbar popup overview |
-| Small Promo Tile [RECOMMENDED] | 440×280 PNG | 🟡 Optional | Promotional graphic for Chrome Web Store search card |
-| Marquee Promo Tile | 1400×560 PNG | 🟡 Optional | Hero banner for featured placements |
+| Asset | Dimensions | Format | Status | Filename / Path |
+| :--- | :--- | :--- | :--- | :--- |
+| Store Icon [REQUIRED] | 128×128 | PNG (24-bit) | ✅ Ready | `extension/icons/icon-128.png` |
+| Screenshot 1 [REQUIRED] | 1280×800 | 24-bit PNG / JPEG (No Alpha) | ✅ Ready | `screenshots/droptrends-entity-1.png` (or `.jpg`) |
+| Screenshot 2 [RECOMMENDED] | 1280×800 | 24-bit PNG / JPEG (No Alpha) | ✅ Ready | `screenshots/droptrends-entity-2.png` (or `.jpg`) |
+| Screenshot 3 [RECOMMENDED] | 1280×800 | 24-bit PNG / JPEG (No Alpha) | ✅ Ready | `screenshots/droptrends-webform-1.png` (or `.jpg`) |
+| Screenshot 4 [RECOMMENDED] | 1280×800 | 24-bit PNG / JPEG (No Alpha) | ✅ Ready | `screenshots/droptrends-webform-2.png` (or `.jpg`) |
+| Screenshot 5 [RECOMMENDED] | 1280×800 | 24-bit PNG / JPEG (No Alpha) | ✅ Ready | `screenshots/droptrends-webform-3.png` (or `.jpg`) |
+| Small Promo Tile [OPTIONAL] | 440×280 | PNG | 🟡 Optional | Promotional graphic for Chrome Web Store search card |
+| Marquee Promo Tile [OPTIONAL] | 1400×560 | PNG | 🟡 Optional | Hero banner for featured placements |
 
-### Screenshot Guidance for Developer:
-- **Screenshot 1 (Main View)**: Open `https://www.drupal.org/project/token` in Chrome. Click the DropScore pill to open the drawer. Take a browser screenshot sized 1280×800 showing the page and the drawer.
-- **Screenshot 2 (Multi-Release View)**: Open `https://www.drupal.org/project/webform` or `flowdrop`. Show the release pill selector switching between versions.
-- **Screenshot 3 (Toolbar Popup)**: Click the DropTrends extension icon in the Chrome toolbar. Capture the popup display.
+### Screenshot Breakdown (All compliant with 1280×800, no alpha channel):
+- **Screenshot 1 (`droptrends-entity-1`)**: Drupal.org project page overview showing the inline DropScore badge and title header.
+- **Screenshot 2 (`droptrends-entity-2`)**: Slide-out detail drawer displaying full 5-pillar health score breakdown and recommendations.
+- **Screenshot 3 (`droptrends-webform-1`)**: Webform module overview featuring multi-release badge indicator.
+- **Screenshot 4 (`droptrends-webform-2`)**: Full drawer breakdown for high-complexity module with security shield verification and velocity score.
+- **Screenshot 5 (`droptrends-webform-3`)**: Releases table highlighting automated GitLab CI test pipeline status badges.
 
 ---
 
