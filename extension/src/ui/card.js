@@ -95,37 +95,46 @@ class DropTrendsUI {
 
       return `
         <div class="dt-drawer" role="dialog" aria-modal="true" aria-label="DropScore Breakdown">
-          <!-- Top Header Strip -->
+          <!-- Top Header Strip (Two-Tier Clean Hierarchy) -->
           <div class="dt-drawer-header">
-            <div class="dt-drawer-identity">
-              <div class="dt-identity-top">
+            <!-- Row 1: Brand, Namespace, Project Type Badge & Close Button -->
+            <div class="dt-header-top-row">
+              <div class="dt-header-breadcrumbs">
                 <span class="dt-brand-tag">DropTrends</span>
-                <span class="dt-meta-dot">·</span>
+                <span class="dt-meta-sep">/</span>
                 <span class="dt-machine-tag">drupal/${this.escapeHTML(rawData.machineName)}</span>
-                ${rawData.projectType ? `<span class="dt-meta-dot">·</span><span class="dt-type-text">${this.escapeHTML(rawData.projectType)}</span>` : ''}
-                ${evalData.isEmergingProject ? `<span class="dt-emerging-pill">${icons.sprout({ size: 11, color: '#047857' })} Emerging</span>` : ''}
+                ${rawData.projectType ? `<span class="dt-type-badge">${this.escapeHTML(rawData.projectType)}</span>` : ''}
               </div>
-              <h2 class="dt-drawer-title">${this.escapeHTML(rawData.title)}</h2>
-              ${(rawData.activeInstalls && rawData.activeInstalls > 0)
-                ? `<span class="dt-meta-installs">${rawData.activeInstalls.toLocaleString()} active installations reported</span>`
-                : ''
-              }
+              <button class="dt-close-btn" aria-label="Close dialog" title="Close dialog">
+                ${icons.x({ size: 16, color: '#64748b' })}
+              </button>
             </div>
 
-            <div class="dt-drawer-header-right">
-              <!-- Score Lockup Pill (Numerical score + sentiment label) -->
+            <!-- Row 2: Title & Metrics Lockup + Dedicated Score Card -->
+            <div class="dt-header-main-row">
+              <div class="dt-header-title-block">
+                <h2 class="dt-drawer-title" title="${this.escapeHTML(rawData.title)}">${this.escapeHTML(rawData.title)}</h2>
+                <div class="dt-header-meta-row">
+                  ${(rawData.activeInstalls && rawData.activeInstalls > 0)
+                    ? `<span class="dt-meta-installs">${rawData.activeInstalls.toLocaleString()} active installations</span>`
+                    : (evalData.isEmergingProject
+                        ? `<span class="dt-meta-emerging">${icons.sprout({ size: 12, color: '#047857' })} Emerging Project (0 installs)</span>`
+                        : '<span class="dt-meta-installs">0 installations reported</span>'
+                      )
+                  }
+                </div>
+              </div>
+
+              <!-- Dedicated Score Lockup Pill -->
               <div class="dt-score-pill-card" style="border-color: ${evalData.gradeColor}">
                 <div class="dt-score-digits">
                   <span class="dt-score-big" style="color: ${evalData.gradeColor}">${evalData.score}</span>
                   <span class="dt-score-denom">/100</span>
                 </div>
                 <div class="dt-grade-chip" style="background-color: ${evalData.gradeColor}">
-                  ${evalData.gradeLabel}
+                  ${evalData.isEmergingProject ? `${icons.sprout({ size: 11, color: '#ffffff' })} ` : ''}${evalData.gradeLabel}
                 </div>
               </div>
-              <button class="dt-close-btn" aria-label="Close dialog">
-                ${icons.x({ size: 16, color: '#64748b' })}
-              </button>
             </div>
           </div>
 
@@ -538,53 +547,94 @@ class DropTrendsUI {
       }
 
       /* Streamlined Header: Identity + Score Lockup */
+      /* Header: Two-Row Clean Hierarchy */
       .dt-drawer-header {
+        display: flex;
+        flex-direction: column;
+        padding: 12px 16px 14px;
+        border-bottom: 1px solid #e2e8f0;
+        background: #f8fafc;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      .dt-header-top-row {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 12px 16px;
-        border-bottom: 1px solid #e2e8f0;
-        background: #f8fafc;
-        gap: 12px;
-        flex-shrink: 0;
+        width: 100%;
+        gap: 8px;
       }
-      .dt-drawer-identity {
-        flex: 1;
-        min-width: 0;
-      }
-      .dt-identity-top {
+      .dt-header-breadcrumbs {
         display: flex;
         align-items: center;
-        gap: 4px;
-        font-size: 11px;
-        color: #64748b;
-        margin-bottom: 2px;
+        gap: 6px;
+        min-width: 0;
+        overflow: hidden;
       }
       .dt-brand-tag {
         font-weight: 700;
+        font-size: 11.5px;
         color: #0284c7;
+        letter-spacing: -0.01em;
+        flex-shrink: 0;
       }
-      .dt-meta-dot {
+      .dt-meta-sep {
         color: #cbd5e1;
+        font-size: 11px;
+        flex-shrink: 0;
       }
       .dt-machine-tag {
         font-family: ui-monospace, SFMono-Regular, monospace;
-      }
-      .dt-type-text {
+        font-size: 11px;
         color: #475569;
-        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
-      .dt-emerging-pill {
+      .dt-type-badge {
         display: inline-flex;
         align-items: center;
-        gap: 3px;
-        background: #ecfdf5;
-        color: #047857;
-        font-weight: 600;
         font-size: 10px;
-        padding: 0 5px;
+        font-weight: 600;
+        color: #475569;
+        background: #e2e8f0;
+        padding: 1px 6px;
         border-radius: 4px;
-        border: 1px solid #a7f3d0;
+        white-space: nowrap;
+        flex-shrink: 0;
+        line-height: 1.3;
+      }
+      .dt-close-btn {
+        background: transparent;
+        border: none;
+        padding: 4px;
+        cursor: pointer;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #64748b;
+        flex-shrink: 0;
+        transition: background 0.12s, color 0.12s;
+      }
+      .dt-close-btn:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+      }
+
+      .dt-header-main-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        width: 100%;
+      }
+      .dt-header-title-block {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
       }
       .dt-drawer-title {
         margin: 0;
@@ -597,27 +647,39 @@ class DropTrendsUI {
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+      .dt-header-meta-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
       .dt-meta-installs {
         font-size: 11px;
         color: #64748b;
       }
-
-      /* Score Lockup in Header */
-      .dt-drawer-header-right {
-        display: flex;
+      .dt-meta-emerging {
+        display: inline-flex;
         align-items: center;
-        gap: 10px;
-        flex-shrink: 0;
+        gap: 4px;
+        color: #047857;
+        font-weight: 600;
       }
+
+      /* Score Lockup Card */
       .dt-score-pill-card {
         display: flex;
         align-items: center;
         gap: 6px;
         background: #ffffff;
-        border: 1px solid #cbd5e1;
+        border: 1.5px solid #cbd5e1;
         border-radius: 9999px;
         padding: 3px 8px 3px 10px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        flex-shrink: 0;
       }
       .dt-score-digits {
         display: flex;
@@ -637,23 +699,13 @@ class DropTrendsUI {
         color: #ffffff;
         font-size: 10.5px;
         font-weight: 700;
-        padding: 2px 7px;
+        padding: 2.5px 8px;
         border-radius: 9999px;
         line-height: 1.2;
         white-space: nowrap;
-      }
-      .dt-close-btn {
-        background: transparent;
-        border: none;
-        padding: 4px;
-        cursor: pointer;
-        border-radius: 4px;
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        justify-content: center;
-      }
-      .dt-close-btn:hover {
-        background: #e2e8f0;
+        gap: 3px;
       }
 
       /* Integrated Action & Release Strip */
