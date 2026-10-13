@@ -17,13 +17,17 @@ const DropIcons = {
           <stop offset="100%" stop-color="#0369a1" />
         </linearGradient>
       </defs>
-      <path d="M 64 6 C 64 6, 12 60, 12 88 C 12 118, 34 128, 64 128 C 94 128, 116 118, 116 88 C 116 60, 64 6, 64 6 Z" fill="url(#dt-drop-gradient)" />
-      <path d="M 64 16 C 64 16, 22 64, 22 86 C 22 96, 28 108, 38 114" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="3.5" stroke-linecap="round" />
-      <rect x="32" y="80" width="15" height="28" rx="4" fill="rgba(255,255,255,0.45)" />
-      <rect x="53" y="64" width="15" height="44" rx="4" fill="rgba(255,255,255,0.88)" />
-      <rect x="74" y="48" width="15" height="60" rx="4" fill="#10b981" />
-      <path d="M 30 78 L 92 38" stroke="#ffffff" stroke-width="7" stroke-linecap="round" />
-      <path d="M 72 38 L 92 38 L 92 58" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+      <g transform="translate(64, 64) scale(1.06, 1.06) translate(-64, -58.7)">
+        <path d="M 96.8 54.3 C 96.5 53.8 96.2 53.3 95.8 52.8 C 94.1 50.6 91.8 48.6 89.8 46.8 C 86.8 44.1 83.7 41.5 81.2 38.4 C 77.3 33.6 74.4 28.1 72.1 22.3 C 70.3 17.7 69 13 67.9 8.2 C 67.4 5.9 66.8 3.5 66.2 1.3 C 65.9 0.4 65.4 -0.1 64.4 0 C 63.6 0.1 63 0.6 62.7 1.4 C 61.8 4.2 60.9 7 60.2 9.9 C 58.5 16.7 56.4 23.4 53 29.6 C 50.1 35 46.2 39.7 42.1 44.2 C 38.6 48 34.6 51.5 31.6 55.9 C 27.2 62.3 25.1 69.8 25 77.6 C 24.9 84.8 27.2 91.5 31.1 97.5 C 36.3 105.7 43.6 111.4 52.6 114.7 C 60.1 117.5 67.9 117.5 75.4 114.7 C 84.4 111.4 91.7 105.7 96.9 97.5 C 100.8 91.5 103.1 84.8 103 77.6 C 102.9 69.3 100.7 61.3 96.8 54.3 Z" fill="url(#dt-drop-gradient)" />
+        <path d="M 64 12 C 55 24 38 48 35 68 C 33 76 35 84 39 90" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2.5" stroke-linecap="round" />
+      </g>
+      <rect x="38" y="80" width="14" height="32" rx="4" fill="#ef4444" />
+      <rect x="57" y="62" width="14" height="50" rx="4" fill="#f59e0b" />
+      <rect x="76" y="44" width="14" height="68" rx="4" fill="#7cbc48" />
+      <path d="M 34 78 L 94 34" stroke="#ffffff" stroke-width="11" stroke-linecap="round" />
+      <path d="M 72 34 L 94 34 L 94 54" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M 34 78 L 94 34" stroke="#7cbc48" stroke-width="6.5" stroke-linecap="round" />
+      <path d="M 72 34 L 94 34 L 94 54" fill="none" stroke="#7cbc48" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" />
     </svg>`;
   },
 
