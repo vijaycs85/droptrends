@@ -3,7 +3,7 @@ name: Mirror to Drupal.org
 on:
   push:
     branches:
-      - main
+      - 1.x
     tags:
       - '*'
 
@@ -32,4 +32,4 @@ jobs:
           DRUPAL_SSH_KEY: ${{ secrets.DRUPAL_SSH_KEY }}
         run: |
           git remote add drupal git@git.drupalcode.org:project/droptrends.git
-          git push --tags drupal main
+          git push --tags drupal 1.x
