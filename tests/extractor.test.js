@@ -126,5 +126,144 @@ describe('DOM Extractor Unit Tests', () => {
       'composer require drupal/token'
     );
   });
+
+  it('accurately detects uncovered projects (Dreditor) with alert shields and warning banners', () => {
+    const mockDreditorDoc = {
+      querySelector(selector) {
+        if (selector === '#page-title') {
+          return {
+            cloneNode() {
+              return {
+                querySelectorAll() { return []; },
+                textContent: 'Dreditor (moved)'
+              };
+            }
+          };
+        }
+        if (selector === '.breadbox, .breadcrumb') {
+          return { textContent: 'Modules' };
+        }
+        if (selector === '.note-warning') {
+          return {
+            textContent: 'This project is not covered by Drupal’s security advisory policy.'
+          };
+        }
+        if (selector === '.project-info') {
+          return {
+            textContent: 'Unsupported. Obsolete. Created by sun on 21 July 2009. This project is not covered by the security advisory policy. Use at your own risk! It may have publicly disclosed vulnerabilities.',
+            querySelector(sel) {
+              if (sel.includes('shield-icon-alert') || sel.includes('shield alert')) {
+                return {
+                  getAttribute(attr) {
+                    if (attr === 'src') return '/sites/all/modules/drupalorg/drupalorg/images/shield-icon-alert.svg';
+                    if (attr === 'alt') return 'shield alert';
+                    return null;
+                  }
+                };
+              }
+              return null;
+            }
+          };
+        }
+        if (selector === '#content') {
+          return {
+            textContent: 'The Dreditor project (patch review) has moved. This project is not covered by Drupal’s security advisory policy.'
+          };
+        }
+        return null;
+      },
+      querySelectorAll(selector) {
+        if (selector.includes('.note-warning')) {
+          return [{
+            textContent: 'This project is not covered by Drupal’s security advisory policy.'
+          }];
+        }
+        if (selector.includes('shield-icon') || selector.includes('shield')) {
+          return [{
+            getAttribute(attr) {
+              if (attr === 'src') return '/sites/all/modules/drupalorg/drupalorg/images/shield-icon-alert.svg';
+              if (attr === 'alt') return 'shield alert';
+              return null;
+            },
+            src: '/sites/all/modules/drupalorg/drupalorg/images/shield-icon-alert.svg',
+            alt: 'shield alert'
+          }];
+        }
+        if (selector.includes('.view-drupalorg-project-downloads .release')) {
+          return [];
+        }
+        return [];
+      }
+    };
+
+    const data = DrupalDomExtractor.extract(mockDreditorDoc);
+
+    assert.strictEqual(data.isExcluded, false);
+    assert.strictEqual(data.title, 'Dreditor (moved)');
+    assert.strictEqual(data.isSecurityCovered, false, 'Dreditor must NOT be security covered');
+  });
+
+  it('correctly discriminates release rows with shield-icon-black from shield-icon-alert', () => {
+    const mockReleasesDoc = {
+      querySelectorAll(selector) {
+        if (selector === '.view-drupalorg-project-downloads .release') {
+          return [
+            {
+              classList: { contains(c) { return c === 'stability-stable'; } },
+              querySelector(sel) {
+                if (sel.includes('release-version a')) return { textContent: '2.0.0' };
+                if (sel.includes('shield-icon-alert') || sel.includes('shield alert')) {
+                  return {
+                    getAttribute(attr) {
+                      if (attr === 'src') return '/shield-icon-alert.svg';
+                      if (attr === 'alt') return 'shield alert';
+                      return null;
+                    }
+                  };
+                }
+                if (sel.includes('shield-icon')) {
+                  return {
+                    getAttribute(attr) {
+                      if (attr === 'src') return '/shield-icon-alert.svg';
+                      if (attr === 'alt') return 'shield alert';
+                      return null;
+                    }
+                  };
+                }
+                return null;
+              },
+              textContent: '2.0.0 released 1 Oct 2026'
+            },
+            {
+              classList: { contains(c) { return c === 'stability-stable' || c === 'security-covered'; } },
+              querySelector(sel) {
+                if (sel.includes('release-version a')) return { textContent: '1.0.0' };
+                if (sel.includes('shield-icon-alert')) return null;
+                if (sel.includes('shield-icon-black') || sel.includes('shield-icon')) {
+                  return {
+                    getAttribute(attr) {
+                      if (attr === 'src') return '/shield-icon-black.svg';
+                      if (attr === 'alt') return 'Stable release covered';
+                      return null;
+                    }
+                  };
+                }
+                return null;
+              },
+              textContent: '1.0.0 released 1 Jan 2026'
+            }
+          ];
+        }
+        return [];
+      }
+    };
+
+    const releases = DrupalDomExtractor.extractAllReleases(mockReleasesDoc, 'testmod');
+    assert.strictEqual(releases.length, 2);
+    assert.strictEqual(releases[0].version, '2.0.0');
+    assert.strictEqual(releases[0].isSecurityCovered, false, 'Release with shield-icon-alert must NOT be security covered');
+    assert.strictEqual(releases[1].version, '1.0.0');
+    assert.strictEqual(releases[1].isSecurityCovered, true, 'Release with shield-icon-black must be security covered');
+  });
 });
 

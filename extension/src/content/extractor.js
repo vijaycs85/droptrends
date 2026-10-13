@@ -40,6 +40,9 @@ class DrupalDomExtractor {
 
     // Security coverage: if project has a covered stable release or general shield icon
     const isSecurityCovered = this.extractSecurityCoverage(doc, latestStableRelease);
+    if (!isSecurityCovered) {
+      releases.forEach(r => { r.isSecurityCovered = false; });
+    }
     const activeInstalls = this.extractActiveInstalls(doc);
     const maintenance = this.extractMaintenanceStatus(doc);
     const issues = this.extractIssuesCockpit(doc);
@@ -156,20 +159,66 @@ class DrupalDomExtractor {
   }
 
   static extractSecurityCoverage(doc, latestStableRelease = null) {
-    // If the latest stable release is covered, project has security advisory coverage
+    // 1. Explicit negative indicators ALWAYS take highest precedence.
+    // If Drupal.org warns that this project is not covered by the security advisory policy,
+    // or displays warning/alert shield icons, security coverage is unequivocally false.
+    const noteWarnings = doc.querySelectorAll ? doc.querySelectorAll('.note-warning, .messages--warning, .messages.warning, .status-warning') : [];
+    for (const el of noteWarnings) {
+      const text = el.textContent || '';
+      if (/not covered by (?:Drupal[’']s |the )?security advisory policy/i.test(text) || /security advisory policy/i.test(text)) {
+        return false;
+      }
+    }
+
+    const projectInfo = doc.querySelector ? doc.querySelector('.project-info') : null;
+    if (projectInfo) {
+      const text = projectInfo.textContent || '';
+      if (/not covered by (?:Drupal[’']s |the )?security advisory policy/i.test(text) || /use at your own risk/i.test(text)) {
+        return false;
+      }
+      if (projectInfo.querySelector && projectInfo.querySelector('img[src*="shield-icon-alert"], img[src*="shield-icon-orange"], img[src*="shield-icon-gray"], img[alt*="shield alert" i], img[alt*="not covered" i]')) {
+        return false;
+      }
+    }
+
+    const content = doc.querySelector ? (doc.querySelector('#content') || doc.body) : null;
+    if (content) {
+      const text = content.textContent || '';
+      if (/not covered by (?:Drupal[’']s |the )?security advisory policy/i.test(text) || /Use at your own risk!\s+It may have publicly disclosed vulnerabilities/i.test(text)) {
+        return false;
+      }
+    }
+
+    // 2. Positive indicators (only evaluated if no negative indicators exist)
     if (latestStableRelease?.isSecurityCovered) return true;
 
-    const shieldImgs = doc.querySelectorAll('img[src*="shield-icon"], img[alt*="shield"]');
-    if (shieldImgs.length > 0) return true;
-
-    const securityCovered = doc.querySelectorAll('.security-covered, .field-security-advisory-coverage');
-    if (securityCovered.length > 0) return true;
-
-    const projectInfo = doc.querySelector('.project-info');
     if (projectInfo) {
-      const text = projectInfo.textContent;
-      if (text.includes('covered by the security advisory policy')) return true;
-      if (text.includes('not covered by the security advisory policy')) return false;
+      const text = projectInfo.textContent || '';
+      if (/(?:Stable releases for this project are |This project is )covered by (?:Drupal[’']s |the )?security advisory policy/i.test(text)) {
+        return true;
+      }
+    }
+
+    const shieldImgs = doc.querySelectorAll ? doc.querySelectorAll('img[src*="shield-icon"], img[alt*="shield" i]') : [];
+    for (const img of shieldImgs) {
+      const src = (img.getAttribute ? img.getAttribute('src') : img.src) || '';
+      const alt = (img.getAttribute ? img.getAttribute('alt') : img.alt) || '';
+      // Skip alert or uncovered shields
+      if (src.includes('alert') || src.includes('orange') || src.includes('gray') || /alert|not covered/i.test(alt)) {
+        continue;
+      }
+      if (src.includes('shield-icon') || /covered by/i.test(alt)) {
+        return true;
+      }
+    }
+
+    const securityCovered = doc.querySelectorAll ? doc.querySelectorAll('.security-covered, .field-security-advisory-coverage') : [];
+    for (const el of securityCovered) {
+      const classList = el.classList || { contains: () => false };
+      if (classList.contains('not-covered') || classList.contains('security-not-covered')) continue;
+      const text = el.textContent || '';
+      if (/not covered/i.test(text)) continue;
+      return true;
     }
 
     return false;
@@ -204,7 +253,22 @@ class DrupalDomExtractor {
       const isPreRelease = /-(alpha|beta|rc|dev)/i.test(version);
       const isStable = isExplicitStableClass || !isPreRelease;
 
-      const isSecurityCovered = el.classList.contains('security-covered') || Boolean(el.querySelector('img[src*="shield-icon"]'));
+      // Release-level security coverage
+      const hasAlertShield = Boolean(el.querySelector && el.querySelector('img[src*="shield-icon-alert"], img[src*="shield-icon-orange"], img[src*="shield-icon-gray"], img[alt*="shield alert" i], img[alt*="not covered" i]'));
+      const isExplicitUncovered = el.classList?.contains('not-covered') || el.classList?.contains('security-not-covered') || hasAlertShield;
+      let isSecurityCovered = false;
+      if (!isExplicitUncovered) {
+        const coveredImg = el.querySelector ? el.querySelector('img[src*="shield-icon-black"], img[src*="shield-icon-green"], img[src*="shield-icon"]') : null;
+        if (coveredImg) {
+          const src = (coveredImg.getAttribute ? coveredImg.getAttribute('src') : coveredImg.src) || '';
+          const alt = (coveredImg.getAttribute ? coveredImg.getAttribute('alt') : coveredImg.alt) || '';
+          if (!src.includes('alert') && !src.includes('orange') && !src.includes('gray') && !/alert|not covered/i.test(alt)) {
+            isSecurityCovered = true;
+          }
+        } else if (el.classList?.contains('security-covered')) {
+          isSecurityCovered = true;
+        }
+      }
 
       const createdSpan = el.querySelector('.views-field-created');
       let dateString = createdSpan ? createdSpan.textContent.replace(/released/i, '').trim() : null;

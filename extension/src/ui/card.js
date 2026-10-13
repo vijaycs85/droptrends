@@ -171,7 +171,9 @@ class DropTrendsUI {
               </div>
               <div class="dt-scorecard-rows">
                 ${this.renderPillarRow(
-                  icons.shieldCheck({ size: 14, color: '#059669' }),
+                  evalData.pillars.security.breakdown.coverage > 0
+                    ? icons.shieldCheck({ size: 14, color: '#059669' })
+                    : icons.shieldAlert({ size: 14, color: '#b45309' }),
                   'Security & Trust',
                   evalData.pillars.security.score,
                   25,
