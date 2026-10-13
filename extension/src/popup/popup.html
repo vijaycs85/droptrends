@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DropTrends</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="dt-popup-container">
+    <header class="dt-popup-header">
+      <div class="dt-popup-brand">
+        <svg class="dt-popup-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" fill="url(#popup-grad)"/>
+          <defs>
+            <linearGradient id="popup-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#0284c7" />
+              <stop offset="100%" stop-color="#10b981" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="dt-brand-title">DropTrends</span>
+      </div>
+      <span class="dt-version-badge">v1.0.0</span>
+    </header>
+
+    <main class="dt-popup-main">
+      <!-- Active Module View -->
+      <section id="dt-active-view" class="dt-view dt-hidden">
+        <div class="dt-card">
+          <div class="dt-card-header">
+            <div>
+              <h2 id="dt-module-title" class="dt-module-title">Token</h2>
+              <span id="dt-module-machine" class="dt-module-machine">drupal/token</span>
+            </div>
+            <div id="dt-score-pill" class="dt-score-pill">
+              <span id="dt-score-val" class="dt-score-val">96</span>
+              <span id="dt-score-grade" class="dt-score-grade">A+</span>
+            </div>
+          </div>
+
+          <div class="dt-meta-row">
+            <span id="dt-sec-tag" class="dt-tag dt-tag-sec">🛡️ Security Covered</span>
+            <span id="dt-d11-tag" class="dt-tag dt-tag-d11">🚀 D11 Ready</span>
+          </div>
+
+          <div class="dt-pillars-compact">
+            <div class="dt-pillar-mini">
+              <span>Security</span>
+              <strong id="dt-pillar-sec">25/25</strong>
+            </div>
+            <div class="dt-pillar-mini">
+              <span>Maintenance</span>
+              <strong id="dt-pillar-maint">22/25</strong>
+            </div>
+            <div class="dt-pillar-mini">
+              <span>Modernity</span>
+              <strong id="dt-pillar-mod">20/20</strong>
+            </div>
+            <div class="dt-pillar-mini">
+              <span>CI & Quality</span>
+              <strong id="dt-pillar-qual">15/15</strong>
+            </div>
+            <div class="dt-pillar-mini">
+              <span>Adoption</span>
+              <strong id="dt-pillar-adopt">15/15</strong>
+            </div>
+          </div>
+
+          <div class="dt-card-footer">
+            <button id="dt-open-page-btn" class="dt-btn-primary">View on Drupal.org</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Search & Jump View (Shown when not on a module page) -->
+      <section id="dt-search-view" class="dt-view">
+        <div class="dt-search-hero">
+          <p class="dt-search-tagline">Evaluate any Drupal module with objective 0-100 DropScore metrics.</p>
+          <form id="dt-search-form" class="dt-search-box">
+            <input type="text" id="dt-search-input" placeholder="e.g. token, pathauto, webform" autocomplete="off" required>
+            <button type="submit" class="dt-btn-primary">Inspect</button>
+          </form>
+        </div>
+
+        <div id="dt-recent-section" class="dt-recent-section dt-hidden">
+          <h3 class="dt-recent-heading">Recently Inspected</h3>
+          <ul id="dt-recent-list" class="dt-recent-list"></ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="dt-popup-footer">
+      <span>Drupal Ecosystem Intelligence</span>
+      <a href="https://www.drupal.org/project/modules" target="_blank" rel="noopener" class="dt-link">Modules ↗</a>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

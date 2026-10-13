@@ -1,0 +1,22 @@
+{
+  "name": "droptrends",
+  "version": "1.0.0",
+  "description": "Intelligent health ratings, quality metrics, and discoverability for the Drupal ecosystem.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/**/*.test.js",
+    "generate-icons": "node scripts/generate-icons.js",
+    "build": "pnpm generate-icons && node scripts/build.js",
+    "package": "pnpm build && node scripts/package-extension.js"
+  },
+  "keywords": [
+    "drupal",
+    "dropscore",
+    "droptrends",
+    "browser-extension",
+    "manifest-v3",
+    "drupalorg"
+  ],
+  "author": "DropTrends Team",
+  "license": "MIT"
+}
