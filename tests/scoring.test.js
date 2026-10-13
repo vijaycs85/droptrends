@@ -144,4 +144,29 @@ describe('DropScore Engine Unit Tests', () => {
     assert.ok(result.score <= 35, `Expected score <= 35, got ${result.score}`);
     assert.strictEqual(result.gradeLabel, 'Needs Attention');
   });
+
+  it('automatically infers PHP 8.3+ support from Drupal 11 compatibility', () => {
+    const mockD11Module = {
+      machineName: 'd11_mod',
+      title: 'Drupal 11 Module',
+      isSecurityCovered: true,
+      activeInstalls: 5000,
+      lastReleaseDaysAgo: 20,
+      supportsDrupal11: true,
+      supportsDrupal10: true,
+      modernPhpSupported: false, // Even if false in raw DOM, D11 enforces PHP 8.3+
+      maintainersCount: 2,
+      sponsorsCount: 1,
+      gitlabPipelineStatus: 'passed',
+      hasAutomatedTests: true
+    };
+
+    const result = evaluateDropScore(mockD11Module);
+    assert.strictEqual(result.pillars.modernity.score, 20);
+    assert.strictEqual(result.pillars.modernity.breakdown.modernPhp, 2);
+    assert.strictEqual(result.pillars.modernity.breakdown.drupal11, 12);
+    // Ensure no PHP 8.3 recommendation is raised when D11 is supported
+    const hasPhpRecommendation = result.recommendations.some(r => r.topic === 'PHP 8.3+');
+    assert.strictEqual(hasPhpRecommendation, false);
+  });
 });
