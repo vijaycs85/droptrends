@@ -26,7 +26,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           });
           await chrome.action.setBadgeBackgroundColor({
             tabId: sender.tab.id,
-            color: message.gradeColor || '#10b981'
+            color: message.gradeColor || '#059669'
           });
           await chrome.action.setTitle({
             tabId: sender.tab.id,
@@ -38,16 +38,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: false, error: err.message });
       }
     })();
-    return true; // Keep channel open for async response
+    return true;
+  }
+
+  if (message.type === 'DROPTRENDS_PROJECT_EXCLUDED') {
+    (async () => {
+      try {
+        if (sender.tab?.id) {
+          await chrome.action.setBadgeText({ tabId: sender.tab.id, text: '' });
+          await chrome.action.setTitle({
+            tabId: sender.tab.id,
+            title: `${message.moduleName} is an official Drupal platform (excluded from DropScore)`
+          });
+        }
+        sendResponse({ success: true });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
   }
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'loading' && tab.url && !tab.url.includes('drupal.org/project/')) {
-    try {
-      await chrome.action.setBadgeText({ tabId, text: '' });
-    } catch {
-      // Ignore if tab closed
+  if (changeInfo.status === 'loading' && tab.url) {
+    const isExcluded = /\/project\/(drupal|cms|drupal_cms)(\/|$)/.test(tab.url);
+    const isProjectPage = tab.url.includes('drupal.org/project/');
+
+    if (!isProjectPage || isExcluded) {
+      try {
+        await chrome.action.setBadgeText({ tabId, text: '' });
+      } catch {}
     }
   }
 });

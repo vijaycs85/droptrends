@@ -1,18 +1,32 @@
 /**
- * DropTrends DOM Extractor v1.1
- * Extracts project and version-level signals from Drupal.org project pages.
+ * DropTrends DOM Extractor v1.2
+ * Extracts project and version-level signals from Drupal.org project pages with core platform exclusion.
  */
 
 class DrupalDomExtractor {
+  static isExcludedProject(machineName) {
+    if (!machineName) return false;
+    return ['drupal', 'drupal_cms', 'cms'].includes(machineName.toLowerCase());
+  }
+
   /**
    * Main entry point to extract module metadata from the active page DOM.
    * @param {Document} [doc=document] - DOM document
-   * @returns {Object} Extracted RawModuleData with multi-version details
+   * @returns {Object|null} Extracted RawModuleData with multi-version details, or null if excluded
    */
   static extract(doc = document) {
     const pathname = (typeof window !== 'undefined' && window.location) ? window.location.pathname : '';
     const match = pathname.match(/\/project\/([a-zA-Z0-9_\-]+)/);
     const machineName = match ? match[1] : this.extractMachineNameFallback(doc);
+
+    // If this is Drupal Core or Drupal CMS, immediately mark as excluded
+    if (this.isExcludedProject(machineName)) {
+      return {
+        isExcluded: true,
+        machineName,
+        title: machineName === 'drupal' ? 'Drupal Core' : 'Drupal CMS'
+      };
+    }
 
     const title = this.extractTitle(doc, machineName);
     const projectType = this.extractProjectType(doc);
@@ -26,13 +40,11 @@ class DrupalDomExtractor {
     const sponsors = this.extractSupportingOrganizations(doc);
     const gitlab = this.extractGitLabInfo(doc, machineName);
 
-    // Global D11 / D10 page-level scan
     const pageCompatibility = this.extractPageCompatibility(doc);
-
-    // Choose recommended release as primary
     const recommendedRelease = releases.find(r => r.isRecommended) || releases[0] || null;
 
     return {
+      isExcluded: false,
       machineName,
       title,
       projectType,
@@ -42,7 +54,6 @@ class DrupalDomExtractor {
       url: (typeof window !== 'undefined' && window.location) ? window.location.href : `https://www.drupal.org/project/${machineName}`,
       isSecurityCovered,
       activeInstalls,
-      // Recommended release signals
       latestVersion: recommendedRelease?.version || null,
       lastReleaseDate: recommendedRelease?.dateString || null,
       lastReleaseDaysAgo: recommendedRelease?.daysAgo ?? null,
@@ -52,7 +63,6 @@ class DrupalDomExtractor {
       modernPhpSupported: recommendedRelease?.modernPhp || pageCompatibility.modernPhp,
       isRecipeReady: recommendedRelease?.recipeReady || pageCompatibility.recipeReady,
       compatibilityStrings: recommendedRelease?.compatibilityStrings || pageCompatibility.strings,
-      // Full list of releases for version-level evaluation
       releases,
       maintenanceStatus: maintenance.maintenanceStatus,
       developmentStatus: maintenance.developmentStatus,
@@ -87,7 +97,6 @@ class DrupalDomExtractor {
     const heading = doc.querySelector('#page-title');
     if (heading) {
       const clone = heading.cloneNode(true);
-      // Remove any injected DropTrends elements or images
       const customElements = clone.querySelectorAll('#droptrends-root, img, .repository-logo');
       customElements.forEach(i => i.remove());
       const text = clone.textContent.trim();
@@ -118,7 +127,6 @@ class DrupalDomExtractor {
     if (createdEl) {
       const dtAttr = createdEl.getAttribute('datetime');
       if (dtAttr) {
-        // Unix timestamp in seconds or ISO
         const num = parseInt(dtAttr, 10);
         if (!isNaN(num) && num > 1000000000) {
           const date = new Date(num * 1000);
@@ -173,9 +181,6 @@ class DrupalDomExtractor {
     return 0;
   }
 
-  /**
-   * Extracts all releases from the project page download section.
-   */
   static extractAllReleases(doc) {
     const releases = [];
     const releaseElements = doc.querySelectorAll('.view-drupalorg-project-downloads .release');
@@ -191,7 +196,6 @@ class DrupalDomExtractor {
       const createdSpan = el.querySelector('.views-field-created');
       let dateString = createdSpan ? createdSpan.textContent.replace(/released/i, '').trim() : null;
 
-      // Dev release updated time check
       if (!dateString) {
         const m = el.textContent.match(/updated\s+([0-9]{1,2}\s+[a-zA-Z]{3}\s+[0-9]{4})/i);
         if (m) dateString = m[1];
@@ -205,14 +209,12 @@ class DrupalDomExtractor {
         }
       }
 
-      // Composer Command
       let composerCommand = null;
       const composerEl = el.querySelector('textarea.drupalorg-copy-release, .composer-command');
       if (composerEl) {
         composerCommand = composerEl.value || composerEl.textContent.trim();
       }
 
-      // Compatibility strings within this release row
       const rowText = el.textContent;
       const compatStrings = [];
       let supportsD11 = false;
@@ -228,13 +230,11 @@ class DrupalDomExtractor {
         if (/\^10|~10|10\./.test(str)) supportsD10 = true;
       }
 
-      // Enhanced Drupal 11 patterns (ddev recipes, D11 tags)
       if (/\bdrupal11\b|\bdrupal-11\b|\bDrupal 11\b|\^11\b/.test(rowText)) supportsD11 = true;
       if (/\bdrupal10\b|\bdrupal-10\b|\bDrupal 10\b|\^10\b/.test(rowText)) supportsD10 = true;
       if (/PHP\s*8\.[2-9]/.test(rowText)) modernPhp = true;
       if (/recipe|drupal cms/i.test(rowText)) recipeReady = true;
 
-      // Associated GitLab branch for pipeline badge
       const pipelineEl = el.querySelector('p.pipeline-result');
       const branch = pipelineEl?.dataset?.version || version.replace(/-dev$/, '');
 
@@ -268,7 +268,6 @@ class DrupalDomExtractor {
     let modernPhp = false;
     let recipeReady = false;
 
-    // Enhanced regex matching for Drupal 11 in site templates, install instructions & recipes
     if (/\bdrupal11\b|\bdrupal-11\b|\bDrupal 11\b|\^11\b|\bcore: \^11\b/.test(pageText)) {
       supportsD11 = true;
       strings.push('Drupal 11');

@@ -24,7 +24,7 @@ describe('DOM Extractor Unit Tests', () => {
         if (selector.includes('time[pubdate]')) {
           return {
             getAttribute(attr) {
-              if (attr === 'datetime') return String(Math.floor(Date.now() / 1000) - 86400 * 10); // 10 days ago
+              if (attr === 'datetime') return String(Math.floor(Date.now() / 1000) - 86400 * 10);
               return null;
             },
             textContent: '1 October 2026'
@@ -80,6 +80,7 @@ describe('DOM Extractor Unit Tests', () => {
 
     const data = DrupalDomExtractor.extract(mockDoc);
 
+    assert.strictEqual(data.isExcluded, false);
     assert.strictEqual(data.title, 'Nightingale');
     assert.strictEqual(data.isSecurityCovered, true);
     assert.strictEqual(data.isEmergingProject, true);
@@ -89,5 +90,14 @@ describe('DOM Extractor Unit Tests', () => {
     assert.strictEqual(data.releases[0].version, '1.0.1');
     assert.strictEqual(data.releases[0].isSecurityCovered, true);
     assert.strictEqual(data.releases[1].version, '1.x-dev');
+  });
+
+  it('excludes Drupal Core and Drupal CMS platforms from evaluation', () => {
+    assert.strictEqual(DrupalDomExtractor.isExcludedProject('drupal'), true);
+    assert.strictEqual(DrupalDomExtractor.isExcludedProject('drupal_cms'), true);
+    assert.strictEqual(DrupalDomExtractor.isExcludedProject('cms'), true);
+    assert.strictEqual(DrupalDomExtractor.isExcludedProject('token'), false);
+    assert.strictEqual(DrupalDomExtractor.isExcludedProject('pathauto'), false);
+    assert.strictEqual(DrupalDomExtractor.isExcludedProject('nightingale'), false);
   });
 });

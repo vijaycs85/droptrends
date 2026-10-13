@@ -1,5 +1,5 @@
 /**
- * DropTrends Popup Controller
+ * DropTrends Popup Controller v1.2
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -33,13 +33,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentTab = tabs[0];
   }
 
-  const isDrupalProject = currentTab?.url && currentTab.url.includes('drupal.org/project/');
+  const isExcluded = currentTab?.url && /\/project\/(drupal|cms|drupal_cms)(\/|$)/.test(currentTab.url);
+  const isDrupalProject = currentTab?.url && currentTab.url.includes('drupal.org/project/') && !isExcluded;
 
   if (isDrupalProject) {
     const storage = await chrome.storage.local.get(['lastViewedModule', 'recentModules']);
     const current = storage.lastViewedModule;
 
-    if (current && current.rawData) {
+    if (current && current.rawData && !current.rawData.isExcluded) {
       activeView.classList.remove('dt-hidden');
       searchView.classList.add('dt-hidden');
 
@@ -69,9 +70,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Not on a module page: Show Search View
+  // Not on a module page or viewing Core/Drupal CMS
   activeView.classList.add('dt-hidden');
   searchView.classList.remove('dt-hidden');
+
+  if (isExcluded) {
+    const tagline = document.querySelector('.dt-search-tagline');
+    if (tagline) {
+      tagline.textContent = 'You are viewing an official Drupal platform (Drupal Core / Drupal CMS). DropScore evaluates contributed modules, themes, and site templates.';
+    }
+  }
 
   searchForm.addEventListener('submit', (e) => {
     e.preventDefault();
