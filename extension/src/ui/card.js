@@ -1108,18 +1108,21 @@ class DropTrendsUI {
       .dt-header-breadcrumbs {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 7px;
         min-width: 0;
         overflow: hidden;
       }
       .dt-brand-tag {
         display: inline-flex;
         align-items: center;
-        gap: 4.5px;
+        gap: 7px;
         font-weight: 700;
         font-size: 11.5px;
         color: #0284c7;
         letter-spacing: -0.01em;
+        flex-shrink: 0;
+      }
+      .dt-brand-tag svg {
         flex-shrink: 0;
       }
       .dt-meta-sep {
