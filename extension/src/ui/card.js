@@ -55,6 +55,8 @@ class DropTrendsUI {
 
     let currentVersion = evaluation.activeVersion || rawData.latestVersion || 'Latest';
     let currentEvaluation = evaluation;
+    let isExpandedView = false;
+    let currentInsightFilter = 'all';
 
     const icons = globalThis.DropIcons || {};
 
@@ -126,6 +128,10 @@ class DropTrendsUI {
         || (typeof DrupalDomExtractor !== 'undefined' ? DrupalDomExtractor.generateComposerCommand(rawData.machineName, activeRel?.version, activeRel?.isStable) : null)
         || rawData.composerCommand
         || `composer require drupal/${rawData.machineName}`;
+
+      const insights = DropTrendsUI.generateLighthouseInsights(evalData, rawData, activeRel);
+      const warnCount = insights.filter(i => i.severity === 'critical' || i.severity === 'warning').length;
+      const passCount = insights.filter(i => i.severity === 'passed').length;
 
       return `
         <div class="dt-drawer" role="dialog" aria-modal="true" aria-label="DropScore Breakdown">
@@ -204,6 +210,15 @@ class DropTrendsUI {
             ` : ''}
           </div>
 
+          <!-- Top Lighthouse Category Gauges Overview -->
+          <div class="dt-lighthouse-bar">
+            ${DropTrendsUI.renderLighthouseGauge(evalData.pillars.security.score, 25, 'Security', 'dt-pillar-sec')}
+            ${DropTrendsUI.renderLighthouseGauge(evalData.pillars.modernity.score, 20, 'Modernity', 'dt-pillar-mod')}
+            ${DropTrendsUI.renderLighthouseGauge(evalData.pillars.maintenance.score, 25, 'Velocity', 'dt-pillar-maint')}
+            ${DropTrendsUI.renderLighthouseGauge(evalData.pillars.quality.score, 15, 'Quality', 'dt-pillar-qual')}
+            ${DropTrendsUI.renderLighthouseGauge(evalData.pillars.adoption.score, 15, 'Community', 'dt-pillar-adopt')}
+          </div>
+
           <!-- Drawer Body -->
           <div class="dt-drawer-body">
             ${evalData.disclaimer ? `
@@ -224,13 +239,19 @@ class DropTrendsUI {
             ` : ''}
 
             <!-- 5 Objective Pillars (Unified High-Density Scorecard) -->
-            <div class="dt-scorecard">
+            <div class="dt-scorecard ${isExpandedView ? 'dt-expanded-view' : ''}">
               <div class="dt-scorecard-header">
-                <span class="dt-scorecard-title">Objective Pillars</span>
-                <span class="dt-scorecard-pts">${evalData.isDisqualified ? 'Disqualified (0 / 100)' : `${evalData.score} / 100 Points`}</span>
+                <div class="dt-sc-header-left">
+                  <span class="dt-scorecard-title">Objective Pillars</span>
+                  <span class="dt-scorecard-pts">${evalData.isDisqualified ? 'Disqualified (0 / 100)' : `${evalData.score} / 100 Points`}</span>
+                </div>
+                <button type="button" class="dt-view-toggle-btn" id="dt-toggle-details-btn" aria-expanded="${isExpandedView ? 'true' : 'false'}">
+                  ${isExpandedView ? 'Collapse view' : 'Expand view'}
+                </button>
               </div>
               <div class="dt-scorecard-rows">
-                ${this.renderPillarRow(
+                ${DropTrendsUI.renderPillarRow(
+                  'dt-pillar-sec',
                   evalData.pillars.security.breakdown.coverage > 0
                     ? icons.shieldCheck({ size: 14, color: '#059669' })
                     : icons.shieldAlert({ size: 14, color: '#b45309' }),
@@ -254,7 +275,8 @@ class DropTrendsUI {
                     }
                   ]
                 )}
-                ${this.renderPillarRow(
+                ${DropTrendsUI.renderPillarRow(
+                  'dt-pillar-maint',
                   icons.zap({ size: 14, color: '#d97706' }),
                   'Maintenance & Velocity',
                   evalData.pillars.maintenance.score,
@@ -284,7 +306,8 @@ class DropTrendsUI {
                     }
                   ]
                 )}
-                ${this.renderPillarRow(
+                ${DropTrendsUI.renderPillarRow(
+                  'dt-pillar-mod',
                   icons.rocket({ size: 14, color: '#2563eb' }),
                   'Modernity & Compatibility',
                   evalData.pillars.modernity.score,
@@ -323,7 +346,8 @@ class DropTrendsUI {
                     return modItems;
                   })()
                 )}
-                ${this.renderPillarRow(
+                ${DropTrendsUI.renderPillarRow(
+                  'dt-pillar-qual',
                   icons.flask({ size: 14, color: '#0891b2' }),
                   'Code Quality & CI',
                   evalData.pillars.quality.score,
@@ -348,7 +372,8 @@ class DropTrendsUI {
                     : (evalData.isEmergingProject ? 'Emerging grace' : '0 sites');
                   const maintCount = rawData.maintainersCount || 1;
                   const maintLabel = `${maintCount} maintainer${maintCount > 1 ? 's' : ''}`;
-                  return this.renderPillarRow(
+                  return DropTrendsUI.renderPillarRow(
+                    'dt-pillar-adopt',
                     icons.users({ size: 14, color: '#4f46e5' }),
                     'Adoption & Community',
                     evalData.pillars.adoption.score,
@@ -368,49 +393,54 @@ class DropTrendsUI {
               </div>
             </div>
 
-            <!-- Key Signals & Insights -->
-            <div class="dt-section">
-              <span class="dt-section-label">Key Signals & Badges</span>
-              <div class="dt-signals-grid">
-                ${evalData.flags.map(f => {
-                  let flagIcon = icons.checkCircle({ size: 13, color: '#059669' });
-                  if (f.text.includes('Emerging')) flagIcon = icons.sprout({ size: 13, color: '#047857' });
-                  else if (f.text.includes('Security')) flagIcon = f.type === 'positive' ? icons.shieldCheck({ size: 13, color: '#059669' }) : icons.shieldAlert({ size: 13, color: '#b45309' });
-                  else if (f.text.includes('Drupal 12')) flagIcon = icons.rocket({ size: 13, color: '#6d28d9' });
-                  else if (f.text.includes('Drupal 11')) flagIcon = icons.rocket({ size: 13, color: '#2563eb' });
-                  else if (f.text.includes('D10 Only') || f.text.includes('EOL')) flagIcon = icons.clock({ size: 13, color: '#d97706' });
-                  else if (f.text.includes('Recently Released') || f.text.includes('Stale')) flagIcon = icons.zap({ size: 13, color: '#d97706' });
-                  else if (f.type === 'warning') flagIcon = icons.alertTriangle({ size: 13, color: '#d97706' });
-                  else if (f.type === 'critical') flagIcon = icons.alertCircle({ size: 13, color: '#dc2626' });
+            <!-- Lighthouse-Style Insights Section -->
+            <div class="dt-section dt-insights-section">
+              <div class="dt-insights-header-wrap">
+                <span class="dt-section-label">Insights</span>
+                <div class="dt-insights-filters">
+                  <button type="button" class="dt-insight-filter-btn ${currentInsightFilter === 'all' ? 'dt-filter-active' : ''}" data-filter="all">All (${insights.length})</button>
+                  ${warnCount > 0 ? `<button type="button" class="dt-insight-filter-btn ${currentInsightFilter === 'needs-attention' ? 'dt-filter-active' : ''}" data-filter="needs-attention">Needs Attention (${warnCount})</button>` : ''}
+                  <button type="button" class="dt-insight-filter-btn ${currentInsightFilter === 'passed' ? 'dt-filter-active' : ''}" data-filter="passed">Passed (${passCount})</button>
+                </div>
+              </div>
 
+              <div class="dt-insights-list">
+                ${insights.map((ins, idx) => {
+                  const isVisible = currentInsightFilter === 'all'
+                    || (currentInsightFilter === 'needs-attention' && (ins.severity === 'critical' || ins.severity === 'warning'))
+                    || (currentInsightFilter === 'passed' && ins.severity === 'passed');
                   return `
-                    <div class="dt-signal-chip dt-signal-${f.type}">
-                      ${flagIcon}
-                      <span class="dt-signal-name">${this.escapeHTML(f.text)}</span>
+                    <div class="dt-insight-item dt-insight-${ins.severity} ${isVisible ? '' : 'dt-hidden'}" data-severity="${ins.severity}">
+                      <button type="button" class="dt-insight-btn" aria-expanded="false" data-index="${idx}">
+                        <div class="dt-insight-left">
+                          <span class="dt-insight-shape dt-shape-${ins.severity}">
+                            ${ins.severity === 'critical'
+                              ? `<svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 1.5L11 10.5H1L6 1.5Z" fill="#dc2626"/></svg>`
+                              : (ins.severity === 'warning'
+                                ? `<svg width="11" height="11" viewBox="0 0 11 11"><rect width="11" height="11" rx="1.5" fill="#d97706"/></svg>`
+                                : `<svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="5" fill="#059669"/></svg>`
+                              )
+                            }
+                          </span>
+                          <span class="dt-insight-title">${this.escapeHTML(ins.title)}</span>
+                          ${ins.subtitle ? `<span class="dt-insight-sub">— ${this.escapeHTML(ins.subtitle)}</span>` : ''}
+                        </div>
+                        <span class="dt-insight-caret">${icons.chevronDown({ size: 11, color: '#64748b' })}</span>
+                      </button>
+                      <div class="dt-insight-body">
+                        <p class="dt-insight-desc">${this.escapeHTML(ins.description)}</p>
+                        ${ins.action ? `
+                          <div class="dt-insight-action">
+                            <span class="dt-insight-action-tag">Action:</span>
+                            <span class="dt-insight-action-text">${this.escapeHTML(ins.action)}</span>
+                          </div>
+                        ` : ''}
+                      </div>
                     </div>
                   `;
                 }).join('')}
               </div>
             </div>
-
-            <!-- Recommendations & Guidance to Improve Score -->
-            ${evalData.recommendations && evalData.recommendations.length > 0 ? `
-              <div class="dt-section">
-                <span class="dt-section-label">Recommendations & How to Improve</span>
-                <ul class="dt-guidance-list">
-                  ${evalData.recommendations.map(r => {
-                    const topic = r.topic || '';
-                    const text = r.action || (typeof r === 'string' ? r : '');
-                    return `
-                      <li class="dt-guidance-item">
-                        ${topic ? `<span class="dt-guidance-badge">${this.escapeHTML(topic)}</span>` : ''}
-                        <span class="dt-guidance-text">${this.escapeHTML(text)}</span>
-                      </li>
-                    `;
-                  }).join('')}
-                </ul>
-              </div>
-            ` : ''}
           </div>
 
           <!-- Drawer Footer -->
@@ -501,6 +531,84 @@ class DropTrendsUI {
           }
         };
       }
+
+      // Lighthouse Top Gauges smooth scroll jump
+      const gaugeItems = modalOverlay.querySelectorAll('.dt-gauge-item');
+      gaugeItems.forEach(item => {
+        const handleJump = () => {
+          const targetId = item.dataset.target;
+          const targetEl = modalOverlay.querySelector(`#${targetId}`);
+          if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            targetEl.classList.remove('dt-pillar-highlight');
+            void targetEl.offsetWidth;
+            targetEl.classList.add('dt-pillar-highlight');
+            setTimeout(() => {
+              targetEl.classList.remove('dt-pillar-highlight');
+            }, 1400);
+          }
+        };
+        item.onclick = handleJump;
+        item.onkeydown = (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleJump();
+          }
+        };
+      });
+
+      // Expand / Collapse View toggle button
+      const toggleBtn = modalOverlay.querySelector('#dt-toggle-details-btn');
+      const scorecard = modalOverlay.querySelector('.dt-scorecard');
+      if (toggleBtn && scorecard) {
+        toggleBtn.onclick = () => {
+          isExpandedView = !isExpandedView;
+          scorecard.classList.toggle('dt-expanded-view', isExpandedView);
+          toggleBtn.textContent = isExpandedView ? 'Collapse view' : 'Expand view';
+          toggleBtn.setAttribute('aria-expanded', isExpandedView ? 'true' : 'false');
+        };
+      }
+
+      // Insights Accordion click
+      const insightButtons = modalOverlay.querySelectorAll('.dt-insight-btn');
+      insightButtons.forEach(btn => {
+        btn.onclick = () => {
+          const item = btn.closest('.dt-insight-item');
+          if (item) {
+            const isOpen = item.classList.toggle('dt-open');
+            btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+          }
+        };
+      });
+
+      // Insights Filters
+      const filterBtns = modalOverlay.querySelectorAll('.dt-insight-filter-btn');
+      filterBtns.forEach(btn => {
+        btn.onclick = () => {
+          filterBtns.forEach(b => b.classList.remove('dt-filter-active'));
+          btn.classList.add('dt-filter-active');
+          currentInsightFilter = btn.dataset.filter;
+          const insightItems = modalOverlay.querySelectorAll('.dt-insight-item');
+          insightItems.forEach(item => {
+            const sev = item.dataset.severity;
+            if (currentInsightFilter === 'all') {
+              item.classList.remove('dt-hidden');
+            } else if (currentInsightFilter === 'needs-attention') {
+              if (sev === 'critical' || sev === 'warning') {
+                item.classList.remove('dt-hidden');
+              } else {
+                item.classList.add('dt-hidden');
+              }
+            } else if (currentInsightFilter === 'passed') {
+              if (sev === 'passed') {
+                item.classList.remove('dt-hidden');
+              } else {
+                item.classList.add('dt-hidden');
+              }
+            }
+          });
+        };
+      });
     };
 
     setupEvents();
@@ -565,7 +673,33 @@ class DropTrendsUI {
     });
   }
 
-  static renderPillarRow(iconHtml, title, score, max, itemsOrDetails, rowTooltip = '') {
+  static renderLighthouseGauge(score, max, label, targetId) {
+    const pct = Math.min(100, Math.max(0, Math.round((score / max) * 100)));
+    let color = '#059669'; // Green (>= 90%)
+    if (pct < 50) {
+      color = '#dc2626'; // Red (< 50%)
+    } else if (pct < 90) {
+      color = '#d97706'; // Amber (50 - 89%)
+    }
+    const radius = 15;
+    const circ = 2 * Math.PI * radius; // ~94.25
+    const offset = circ * (1 - (pct / 100));
+
+    return `
+      <div class="dt-gauge-item" data-target="${targetId}" role="button" tabindex="0" title="${label}: ${score}/${max} pts (${pct}%) — Click to jump">
+        <div class="dt-gauge-dial">
+          <svg class="dt-gauge-svg" width="38" height="38" viewBox="0 0 38 38">
+            <circle class="dt-gauge-bg" cx="19" cy="19" r="${radius}" fill="transparent" stroke="#e2e8f0" stroke-width="3"></circle>
+            <circle class="dt-gauge-arc" cx="19" cy="19" r="${radius}" fill="transparent" stroke="${color}" stroke-width="3" stroke-dasharray="${circ.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}" stroke-linecap="round"></circle>
+          </svg>
+          <span class="dt-gauge-val" style="color: ${color}">${score}</span>
+        </div>
+        <span class="dt-gauge-label">${label}</span>
+      </div>
+    `;
+  }
+
+  static renderPillarRow(id, iconHtml, title, score, max, itemsOrDetails, rowTooltip = '') {
     const pct = Math.min(100, Math.round((score / max) * 100));
 
     let items = [];
@@ -581,7 +715,7 @@ class DropTrendsUI {
     const fullRowTooltip = rowTooltip || `${title}: ${score}/${max} pts (${items.map(i => i.tooltip || i.text).join(' · ')})`;
 
     return `
-      <div class="dt-scorecard-row" title="${this.escapeHTML(fullRowTooltip)}">
+      <div class="dt-scorecard-row" id="${id}" title="${this.escapeHTML(fullRowTooltip)}">
         <div class="dt-sc-header-row">
           <div class="dt-sc-title-group">
             <span class="dt-sc-icon">${iconHtml}</span>
@@ -594,13 +728,214 @@ class DropTrendsUI {
             <span class="dt-sc-score"><strong>${score}</strong><span class="dt-sc-denom">/${max}</span></span>
           </div>
         </div>
+        <!-- Collapsed Compact Chips View -->
         <div class="dt-sc-details-row">
           ${items.map(item => `
             <span class="dt-sc-item" title="${this.escapeHTML(item.tooltip || item.text)}">${this.escapeHTML(item.text)}</span>
           `).join('')}
         </div>
+        <!-- Expanded Full Diagnostics View -->
+        <div class="dt-sc-expanded-grid">
+          ${items.map(item => {
+            const parts = item.text.split(':');
+            const itemLabel = parts[0] ? parts[0].trim() : item.text;
+            const itemScore = parts[1] ? parts[1].trim() : '';
+            return `
+              <div class="dt-sc-expanded-item">
+                <span class="dt-sc-expanded-dot">●</span>
+                <div class="dt-sc-expanded-content">
+                  <div class="dt-sc-expanded-title-line">
+                    <span class="dt-sc-expanded-label">${this.escapeHTML(itemLabel)}</span>
+                    ${itemScore ? `<span class="dt-sc-expanded-score">${this.escapeHTML(itemScore)}</span>` : ''}
+                  </div>
+                  ${item.tooltip ? `<p class="dt-sc-expanded-desc">${this.escapeHTML(item.tooltip)}</p>` : ''}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
       </div>
     `;
+  }
+
+  static generateLighthouseInsights(evalData, rawData, activeRel) {
+    const insights = [];
+
+    // Critical Disqualifiers
+    if (evalData.isDisqualified) {
+      insights.push({
+        severity: 'critical',
+        title: evalData.disclaimer?.title || 'Project Disqualified from Production',
+        subtitle: evalData.disqualificationReason || 'Score 0 / 100',
+        description: evalData.disclaimer?.message || 'This project has been marked as obsolete, unsupported, or has had security advisory coverage revoked by the Drupal Security Team. It is strongly advised not to use it in production.',
+        action: 'Search for active, supported Drupal ecosystem alternatives.'
+      });
+    } else if (evalData.disclaimer && evalData.disclaimer.type === 'critical') {
+      insights.push({
+        severity: 'critical',
+        title: evalData.disclaimer.title,
+        subtitle: 'Critical Disclaimer',
+        description: evalData.disclaimer.message,
+        action: 'Verify module maintenance status before deployment.'
+      });
+    }
+
+    // Security Coverage
+    if (evalData.pillars.security.breakdown.coverage > 0) {
+      insights.push({
+        severity: 'passed',
+        title: 'Covered by Drupal Security Advisory Policy',
+        subtitle: '16/16 pts',
+        description: 'Security vulnerabilities are formally managed, triaged, and announced in coordination with the official Drupal Security Team.',
+        action: null
+      });
+    } else if (!evalData.isDisqualified) {
+      insights.push({
+        severity: 'warning',
+        title: 'Not covered by Security Advisory Policy',
+        subtitle: '0/16 pts',
+        description: 'This project is not opted into or covered by the Drupal security advisory process. Maintainers handle security issues privately.',
+        action: 'Conduct independent code audits and monitor Git commits for security patches.'
+      });
+    }
+
+    // Modernity & Core Compatibility
+    const modBreakdown = evalData.pillars.modernity.breakdown;
+    if (modBreakdown.drupal12 > 0) {
+      insights.push({
+        severity: 'passed',
+        title: 'Drupal 12 Forward-Compatible',
+        subtitle: 'Tested for next-gen core',
+        description: 'Module is already verified to run on upcoming Drupal 12 core releases, future-proofing your Drupal installation.',
+        action: null
+      });
+    } else if (modBreakdown.drupal11 > 0) {
+      insights.push({
+        severity: 'passed',
+        title: 'Drupal 11 & PHP 8.3 Ready',
+        subtitle: 'Modern core compatibility',
+        description: 'Fully compatible with current Drupal 11 release and requires PHP 8.3+ modern language runtime.',
+        action: null
+      });
+    } else if (modBreakdown.drupal10 > 0) {
+      insights.push({
+        severity: 'warning',
+        title: 'Drupal 10 EOL Approaching (November 2026)',
+        subtitle: 'D10 only release',
+        description: 'Drupal 10 will reach official End-of-Life in November 2026. Upgrading or adopting a Drupal 11 compatible release ensures continued community support.',
+        action: 'Update info.yml and composer dependencies to support core_version_requirement: ^10 || ^11.'
+      });
+    }
+
+    // Maintenance Status & Recency
+    const maintBreakdown = evalData.pillars.maintenance.breakdown;
+    if (maintBreakdown.statusLabel && (maintBreakdown.statusLabel.includes('Minimally') || maintBreakdown.statusLabel.includes('Seeking'))) {
+      insights.push({
+        severity: 'warning',
+        title: `Maintenance Status: ${maintBreakdown.statusLabel}`,
+        subtitle: `${maintBreakdown.status}/10 pts`,
+        description: 'Maintainers report this project is minimally maintained or actively looking for new co-maintainers to assist with patches and issue queue velocity.',
+        action: 'Consider contributing patches or offering co-maintainership to help keep the project active.'
+      });
+    }
+
+    if (maintBreakdown.recency >= 7) {
+      insights.push({
+        severity: 'passed',
+        title: 'Active release cadence',
+        subtitle: `${maintBreakdown.recency}/8 pts`,
+        description: `Active release ${evalData.activeVersion || 'latest'} published within the active maintenance window.`,
+        action: null
+      });
+    } else if (maintBreakdown.recency <= 3 && !evalData.isDisqualified) {
+      insights.push({
+        severity: 'warning',
+        title: 'Stale release cadence',
+        subtitle: `${maintBreakdown.recency}/8 pts`,
+        description: 'No new release tags have been published in over a year. Check Git commits to see if ongoing development is occurring in dev branches.',
+        action: 'Check recent Git commit activity and issue queue status.'
+      });
+    }
+
+    // Maintainer Count / Bus Factor
+    const maintCount = rawData.maintainersCount || 1;
+    if (maintCount >= 2) {
+      insights.push({
+        severity: 'passed',
+        title: `Distributed maintainer team (${maintCount} maintainers)`,
+        subtitle: 'Low bus-factor risk',
+        description: 'Multiple maintainers collaborate to review patches, triage bugs, and manage release velocity.',
+        action: null
+      });
+    } else if (!evalData.isDisqualified) {
+      insights.push({
+        severity: 'warning',
+        title: 'Single maintainer bus-factor risk',
+        subtitle: '1 maintainer',
+        description: 'Maintained by a single developer. If the maintainer steps away or becomes unavailable, issue queue resolution may stall.',
+        action: 'Encourage organizational sponsorship or recruit co-maintainers.'
+      });
+    }
+
+    // Community Adoption / Installs
+    const installs = rawData.activeInstalls || 0;
+    if (installs >= 1000) {
+      insights.push({
+        severity: 'passed',
+        title: `Strong community adoption (${installs.toLocaleString()} sites)`,
+        subtitle: `${evalData.pillars.adoption.breakdown.installs}/10 pts`,
+        description: 'Widespread real-world adoption indicates battle-tested reliability, active testing across diverse hosting setups, and ecosystem trust.',
+        action: null
+      });
+    } else if (evalData.isEmergingProject) {
+      insights.push({
+        severity: 'passed',
+        title: 'Emerging project grace applied',
+        subtitle: 'Ecosystem newcomer',
+        description: 'This project is less than 180 days old. Evaluated under the emerging project policy with a +2 grace floor while building an install base.',
+        action: null
+      });
+    }
+
+    // Code Quality & GitLab CI
+    const qualBreakdown = evalData.pillars.quality.breakdown;
+    if (qualBreakdown.pipeline >= 9) {
+      insights.push({
+        severity: 'passed',
+        title: 'GitLab CI pipeline passing',
+        subtitle: '10/10 pts',
+        description: 'Continuous integration automated pipeline is passing on DrupalCode, confirming automated coding standards and tests.',
+        action: null
+      });
+    } else if (rawData.gitlabPipelineStatus && rawData.gitlabPipelineStatus !== 'passed' && !evalData.isDisqualified) {
+      insights.push({
+        severity: 'warning',
+        title: `GitLab CI pipeline status: ${rawData.gitlabPipelineStatus}`,
+        subtitle: `${qualBreakdown.pipeline}/10 pts`,
+        description: 'The automated GitLab CI pipeline is not in a passing state. Check recent pipeline jobs on git.drupalcode.org.',
+        action: 'Inspect failing CI pipeline jobs on DrupalCode GitLab.'
+      });
+    }
+
+    // Add recommendations from engine if not already represented
+    if (evalData.recommendations && evalData.recommendations.length > 0) {
+      evalData.recommendations.forEach(r => {
+        const topic = r.topic || 'Recommendation';
+        const text = r.action || (typeof r === 'string' ? r : '');
+        const isAlreadyRepresented = insights.some(i => i.title.toLowerCase().includes(topic.toLowerCase()));
+        if (!isAlreadyRepresented && text) {
+          insights.push({
+            severity: 'warning',
+            title: topic,
+            subtitle: 'Opportunity to improve',
+            description: text,
+            action: text
+          });
+        }
+      });
+    }
+
+    return insights;
   }
 
   static escapeHTML(str) {
@@ -1097,6 +1432,68 @@ class DropTrendsUI {
         opacity: 0.95;
       }
 
+      /* Lighthouse Category Gauges Bar */
+      .dt-lighthouse-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+      .dt-gauge-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        cursor: pointer;
+        padding: 4px 6px;
+        border-radius: 6px;
+        transition: all 0.15s ease;
+        flex: 1;
+        text-align: center;
+        user-select: none;
+      }
+      .dt-gauge-item:hover {
+        background: #ffffff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        transform: translateY(-1px);
+      }
+      .dt-gauge-dial {
+        position: relative;
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .dt-gauge-svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        transform: rotate(-90deg);
+      }
+      .dt-gauge-bg {
+        stroke: #e2e8f0;
+      }
+      .dt-gauge-arc {
+        transition: stroke-dashoffset 0.4s ease;
+      }
+      .dt-gauge-val {
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1;
+        z-index: 1;
+      }
+      .dt-gauge-label {
+        font-size: 10px;
+        font-weight: 600;
+        color: #475569;
+        white-space: nowrap;
+      }
+
       /* Unified Scorecard Box */
       .dt-scorecard {
         background: #ffffff;
@@ -1114,6 +1511,11 @@ class DropTrendsUI {
         background: #f8fafc;
         border-bottom: 1px solid #e2e8f0;
       }
+      .dt-sc-hdr-left {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+      }
       .dt-scorecard-title {
         font-size: 11px;
         font-weight: 700;
@@ -1125,6 +1527,22 @@ class DropTrendsUI {
         font-size: 11px;
         font-weight: 600;
         color: #64748b;
+      }
+      .dt-view-toggle-btn {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #0284c7;
+        font-size: 10.5px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.12s ease;
+      }
+      .dt-view-toggle-btn:hover {
+        background: #0284c7;
+        color: #ffffff;
+        border-color: #0284c7;
       }
       .dt-scorecard-rows {
         display: flex;
@@ -1144,6 +1562,13 @@ class DropTrendsUI {
       }
       .dt-scorecard-row:last-child {
         border-bottom: none;
+      }
+      .dt-pillar-highlight {
+        animation: dt-pillar-flash 1.4s ease-out;
+      }
+      @keyframes dt-pillar-flash {
+        0% { background: #e0f2fe; }
+        100% { background: transparent; }
       }
       .dt-sc-header-row {
         display: flex;
@@ -1225,6 +1650,63 @@ class DropTrendsUI {
         color: #1d4ed8;
       }
 
+      /* Expanded View Diagnostics Grid */
+      .dt-sc-expanded-grid {
+        display: none;
+        flex-direction: column;
+        gap: 6px;
+        padding-left: 21px;
+        padding-top: 4px;
+      }
+      .dt-scorecard.dt-expanded-view .dt-sc-expanded-grid {
+        display: flex;
+      }
+      .dt-scorecard.dt-expanded-view .dt-sc-details-row {
+        display: none;
+      }
+      .dt-sc-expanded-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        padding: 5px 8px;
+        font-size: 11px;
+      }
+      .dt-sc-expanded-dot {
+        font-size: 8px;
+        line-height: 1.8;
+        color: #0284c7;
+        flex-shrink: 0;
+      }
+      .dt-sc-expanded-content {
+        flex: 1;
+        min-width: 0;
+      }
+      .dt-sc-expanded-title-line {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 700;
+        color: #1e293b;
+        font-size: 11px;
+      }
+      .dt-sc-expanded-label {
+        font-weight: 700;
+      }
+      .dt-sc-expanded-score {
+        font-weight: 800;
+        color: #0284c7;
+        font-size: 10.5px;
+      }
+      .dt-sc-expanded-desc {
+        margin: 2px 0 0;
+        font-size: 10.5px;
+        color: #64748b;
+        line-height: 1.35;
+      }
+
       /* Sections */
       .dt-section {
         display: flex;
@@ -1240,78 +1722,154 @@ class DropTrendsUI {
         letter-spacing: 0.04em;
       }
 
-      /* Key Signals Tag Grid */
-      .dt-signals-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+      /* Lighthouse Insights Section */
+      .dt-insights-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      .dt-insights-header-wrap {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
         gap: 6px;
       }
-      .dt-signal-chip {
+      .dt-insights-filters {
+        display: flex;
+        gap: 4px;
+      }
+      .dt-insight-filter-btn {
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        color: #64748b;
+        font-size: 10.5px;
+        font-weight: 600;
+        padding: 2px 7px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.12s ease;
+      }
+      .dt-insight-filter-btn:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+      }
+      .dt-insight-filter-btn.dt-filter-active {
+        background: #0284c7;
+        color: #ffffff;
+        border-color: #0284c7;
+      }
+      .dt-insights-list {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #ffffff;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+      }
+      .dt-insight-item {
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.12s ease;
+      }
+      .dt-insight-item:last-child {
+        border-bottom: none;
+      }
+      .dt-insight-item.dt-hidden {
+        display: none !important;
+      }
+      .dt-insight-btn {
+        width: 100%;
+        background: transparent;
+        border: none;
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        text-align: left;
+        cursor: pointer;
+        gap: 8px;
+        font-family: inherit;
+        font-size: 11px;
+        transition: background 0.12s ease;
+      }
+      .dt-insight-btn:hover {
+        background: #f8fafc;
+      }
+      .dt-insight-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        flex: 1;
+      }
+      .dt-insight-shape {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .dt-insight-title {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 11.5px;
+        line-height: 1.25;
+      }
+      .dt-insight-sub {
+        color: #94a3b8;
+        font-size: 10.5px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .dt-insight-caret {
+        color: #94a3b8;
+        display: inline-flex;
+        align-items: center;
+        transition: transform 0.18s ease;
+        flex-shrink: 0;
+      }
+      .dt-insight-item.dt-open .dt-insight-caret {
+        transform: rotate(180deg);
+      }
+      .dt-insight-body {
+        display: none;
+        padding: 4px 12px 10px 32px;
+        font-size: 11px;
+        color: #475569;
+        line-height: 1.45;
+        background: #fafafa;
+        border-top: 1px dashed #e2e8f0;
+      }
+      .dt-insight-item.dt-open .dt-insight-body {
+        display: block;
+      }
+      .dt-insight-desc {
+        margin: 0;
+      }
+      .dt-insight-action {
+        margin-top: 6px;
+        padding: 4px 8px;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        font-size: 10.5px;
+        color: #0369a1;
+        font-weight: 600;
         display: flex;
         align-items: center;
         gap: 6px;
-        padding: 5px 8px;
-        border-radius: 5px;
-        font-size: 11px;
-        font-weight: 500;
       }
-      .dt-signal-positive {
-        background: #f0fdf4;
-        border: 1px solid #dcfce7;
-        color: #14532d;
-      }
-      .dt-signal-warning {
-        background: #fffbeb;
-        border: 1px solid #fef3c7;
-        color: #78350f;
-      }
-      .dt-signal-critical {
-        background: #fef2f2;
-        border: 1px solid #fee2e2;
-        color: #7f1d1d;
-      }
-      .dt-signal-name {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      /* Recommendations & Guidance List */
-      .dt-guidance-list {
-        margin: 0;
-        padding: 0;
-        list-style: none;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-      .dt-guidance-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 6px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        padding: 6px 10px;
-        font-size: 11px;
-        line-height: 1.45;
-        color: #334155;
-      }
-      .dt-guidance-badge {
-        display: inline-block;
-        background: #e0f2fe;
-        color: #0369a1;
-        font-size: 10px;
+      .dt-insight-action-tag {
         font-weight: 700;
-        padding: 1px 6px;
-        border-radius: 4px;
-        white-space: nowrap;
-        flex-shrink: 0;
-        line-height: 1.3;
+        color: #0284c7;
+        text-transform: uppercase;
+        font-size: 9.5px;
+        letter-spacing: 0.04em;
       }
-      .dt-guidance-text {
-        color: #475569;
-        flex: 1;
+      .dt-insight-action-text {
+        color: #334155;
+        font-weight: 500;
       }
 
       /* Drawer Footer */

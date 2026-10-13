@@ -307,25 +307,3 @@ body {
 .dt-recent-item:hover {
   background: #f1f5f9;
 }
-
-/* Footer */
-.dt-popup-footer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 10px 16px;
-  border-top: 1px solid var(--border);
-  background: #f8fafc;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.dt-link {
-  color: var(--primary);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.dt-link:hover {
-  text-decoration: underline;
-}
