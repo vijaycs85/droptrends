@@ -158,6 +158,7 @@ class DropScoreEngine {
     const hasPhp85 = Boolean(effectiveData.supportsPhp85) || hasD12;
     const hasModernPhp = hasD12 || hasD11 || Boolean(effectiveData.modernPhpSupported);
 
+    let corePoints = 0;
     let activeCorePoints = 0;
     let ltsCorePoints = 0;
     let phpPoints = hasModernPhp ? 2 : 0;
@@ -168,32 +169,76 @@ class DropScoreEngine {
 
     if (isD12Active) {
       // Future era when Drupal 12 is released and primary
-      // Drupal 12: 12 pts (primary)
-      // Drupal 11: 6 pts (LTS)
-      // Drupal 10: 0 pts (fully EOL)
-      activeCorePoints = hasD12 ? 12 : 0;
-      ltsCorePoints = hasD11 ? 6 : 0;
-      summaryText = `Drupal 12: ${activeCorePoints}/12 · Drupal 11 (LTS): ${ltsCorePoints}/6 · PHP 8.5+: ${phpPoints}/2`;
+      // Supporting Drupal 12 (the active major) earns full core credit (18 pts).
+      // D11 is LTS/deprecating; D12-only modules are not penalized.
+      if (hasD12) {
+        corePoints = 18;
+        if (hasD11) {
+          activeCorePoints = 12;
+          ltsCorePoints = 6;
+          summaryText = `Drupal 12: 12/12 · Drupal 11 (LTS): 6/6 · PHP 8.5+: ${phpPoints}/2`;
+        } else {
+          activeCorePoints = 18;
+          ltsCorePoints = 0;
+          summaryText = `Drupal 12 Only (Next-Gen Core): 18/18 · PHP 8.5+: ${phpPoints}/2`;
+        }
+      } else if (hasD11) {
+        // D11 only (lacks D12): gets LTS core points (6 pts)
+        corePoints = 6;
+        activeCorePoints = 0;
+        ltsCorePoints = 6;
+        summaryText = `Drupal 12: 0/12 · Drupal 11 (LTS): 6/6 · ${targetPhpLabel}: ${phpPoints}/2`;
+      } else {
+        // Legacy (D10 or older in D12 era)
+        corePoints = 0;
+        activeCorePoints = 0;
+        ltsCorePoints = 0;
+        summaryText = `Drupal 12: 0/12 · Drupal 11: 0/6 · Legacy Core`;
+      }
     } else {
-      // Current era: Drupal 11 active, D12 upcoming, D10 leaving support in Nov 2026
-      // Supporting Drupal 12 or Drupal 11 awards the primary 12 pts
-      activeCorePoints = (hasD12 || hasD11) ? 12 : 0;
-      ltsCorePoints = hasD10 ? 6 : 0;
-      const primaryLabel = hasD12 ? 'Drupal 12/11' : 'Drupal 11';
-      summaryText = `${primaryLabel}: ${activeCorePoints}/12 · Drupal 10 (EOL Nov '26): ${ltsCorePoints}/6 · ${targetPhpLabel}: ${phpPoints}/2`;
+      // Current era: Drupal 11 active, D12 upcoming, D10 leaving support in Nov 2026.
+      // Supporting Drupal 11 (or upcoming D12) earns full core credit (18 pts).
+      // D10 is leaving support; D11-only modules are not penalized.
+      if (hasD12 || hasD11) {
+        corePoints = 18;
+        const primaryLabel = hasD12 ? (hasD11 ? 'Drupal 12/11' : 'Drupal 12 Only') : 'Drupal 11';
+        if (hasD10) {
+          activeCorePoints = 12;
+          ltsCorePoints = 6;
+          summaryText = `${primaryLabel}: 12/12 · Drupal 10 (EOL Nov '26): 6/6 · ${targetPhpLabel}: ${phpPoints}/2`;
+        } else {
+          activeCorePoints = 18;
+          ltsCorePoints = 0;
+          const displayLabel = hasD12 ? 'Drupal 12 (Forward-Ready)' : 'Drupal 11 Only (Modern Core)';
+          summaryText = `${displayLabel}: 18/18 · ${targetPhpLabel}: ${phpPoints}/2`;
+        }
+      } else if (hasD10) {
+        // D10 only (lacks D11 and D12): gets LTS core points (6 pts)
+        corePoints = 6;
+        activeCorePoints = 0;
+        ltsCorePoints = 6;
+        summaryText = `Drupal 11: 0/12 · Drupal 10 (EOL Nov '26): 6/6 · ${targetPhpLabel}: ${phpPoints}/2`;
+      } else {
+        // Legacy (D9 or older)
+        corePoints = 0;
+        activeCorePoints = 0;
+        ltsCorePoints = 0;
+        summaryText = `Drupal 11: 0/12 · Drupal 10: 0/6 · Legacy Core`;
+      }
     }
 
-    const modernityScore = Math.max(0, Math.min(20, activeCorePoints + ltsCorePoints + phpPoints));
+    const modernityScore = Math.max(0, Math.min(20, corePoints + phpPoints));
 
     const modernityBreakdown = {
       drupal12: hasD12 ? (isD12Active ? activeCorePoints : 12) : 0,
-      drupal11: hasD11 ? (isD12Active ? ltsCorePoints : activeCorePoints) : 0,
+      drupal11: hasD11 ? (isD12Active ? ltsCorePoints : activeCorePoints) : (hasD12 ? 18 : 0),
       drupal10: hasD10 ? (isD12Active ? 0 : ltsCorePoints) : 0,
       modernPhp: phpPoints,
       phpLabel: targetPhpLabel,
       supportsPhp85: hasPhp85,
       activeCore: activeCorePoints,
       ltsCore: ltsCorePoints,
+      corePoints,
       summaryText,
       d10EolNotice: 'November 2026'
     };
@@ -448,14 +493,14 @@ class DropScoreEngine {
       if (!hasD12) {
         recommendations.push({
           topic: 'Drupal 12',
-          action: 'Missing Drupal 12 support. Update core_version_requirement to include ^12 in .info.yml and test against D12 core (+12 pts).'
+          action: 'Missing Drupal 12 support. Update core_version_requirement to include ^12 in .info.yml and test against D12 core (+18 pts).'
         });
-      }
-      if (!hasD11) {
-        recommendations.push({
-          topic: 'Drupal 11',
-          action: 'Missing Drupal 11 LTS support. Run Upgrade Status or drupal-check to resolve deprecated APIs (+6 pts).'
-        });
+        if (!hasD11) {
+          recommendations.push({
+            topic: 'Drupal 11',
+            action: 'Missing Drupal 11 LTS support. Run Upgrade Status or drupal-check to resolve deprecated APIs (+6 pts).'
+          });
+        }
       }
       if (!hasD12 && !hasModernPhp) {
         recommendations.push({
@@ -474,16 +519,11 @@ class DropScoreEngine {
         } else {
           recommendations.push({
             topic: 'Drupal 11',
-            action: 'Missing Drupal 11 support. Update core_version_requirement to ^10 || ^11 in .info.yml and test against D11 core (+12 pts).'
+            action: 'Missing modern Drupal support. Update core_version_requirement to ^10 || ^11 in .info.yml and test against D11 core (+18 pts).'
           });
         }
       }
-      if (!hasD10 && !hasD12) {
-        recommendations.push({
-          topic: 'Drupal 10',
-          action: 'Missing Drupal 10 support. Run mglaman/drupal-check or Upgrade Status to fix deprecated APIs (+6 pts).'
-        });
-      }
+      // Never recommend adding legacy Drupal 10 if D11 or D12 is already supported
       if (!hasD11 && !hasD12 && !hasModernPhp) {
         recommendations.push({
           topic: 'PHP 8.3+',

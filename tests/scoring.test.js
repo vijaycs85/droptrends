@@ -118,7 +118,7 @@ describe('DropScore Engine Unit Tests', () => {
 
     const result = evaluateDropScore(mockNightingale);
 
-    assert.ok(result.score >= 50 && result.score <= 68, `Expected emerging project score between 50 and 68, got ${result.score}`);
+    assert.ok(result.score >= 50 && result.score <= 75, `Expected emerging project score between 50 and 75, got ${result.score}`);
     assert.strictEqual(result.gradeLabel, 'Emerging');
     assert.strictEqual(result.isEmergingProject, true);
   });
@@ -288,5 +288,66 @@ describe('DropScore Engine Unit Tests', () => {
     assert.strictEqual(result.pillars.modernity.breakdown.phpLabel, 'PHP 8.5+');
     assert.strictEqual(result.pillars.modernity.breakdown.supportsPhp85, true);
     assert.ok(result.pillars.modernity.breakdown.summaryText.includes('PHP 8.5+: 2/2'));
+  });
+
+  it('awards full 20/20 modernity points to Drupal 11-only modules without penalizing for missing D10', () => {
+    const mockD11OnlyModule = {
+      machineName: 'd11_pure',
+      title: 'D11 Pure Module',
+      isSecurityCovered: true,
+      activeInstalls: 500,
+      lastReleaseDaysAgo: 10,
+      supportsDrupal12: false,
+      supportsDrupal11: true,
+      supportsDrupal10: false, // D11 only!
+      maintainersCount: 2,
+      sponsorsCount: 1,
+      gitlabPipelineStatus: 'passed',
+      hasAutomatedTests: true
+    };
+
+    const result = evaluateDropScore(mockD11OnlyModule);
+    assert.strictEqual(result.pillars.modernity.score, 20, 'D11-only modules must receive full 20/20 modernity score');
+    assert.strictEqual(result.pillars.modernity.breakdown.corePoints, 18);
+    assert.strictEqual(result.pillars.modernity.breakdown.modernPhp, 2);
+    // Ensure no recommendation is made to add D10 support
+    const hasD10Rec = result.recommendations.some(r => r.topic === 'Drupal 10');
+    assert.strictEqual(hasD10Rec, false, 'Must not recommend adding D10 to a D11-ready module');
+  });
+
+  it('awards full 20/20 modernity points to Drupal 12-only modules in D12 era without requiring D11', () => {
+    const { DropScoreEngine } = globalThis;
+    try {
+      DropScoreEngine.setCoreSchedule({
+        activeMajor: 12,
+        upcomingMajor: 13,
+        leavingSupportMajor: 11
+      });
+
+      const mockD12OnlyModule = {
+        machineName: 'd12_pure',
+        title: 'D12 Pure Module',
+        isSecurityCovered: true,
+        activeInstalls: 250,
+        lastReleaseDaysAgo: 5,
+        supportsDrupal12: true,
+        supportsDrupal11: false, // D12 only!
+        supportsDrupal10: false,
+        maintainersCount: 2,
+        sponsorsCount: 1,
+        gitlabPipelineStatus: 'passed',
+        hasAutomatedTests: true
+      };
+
+      const result = evaluateDropScore(mockD12OnlyModule);
+      assert.strictEqual(result.pillars.modernity.score, 20, 'D12-only modules must receive full 20/20 in D12 era');
+      assert.strictEqual(result.pillars.modernity.breakdown.corePoints, 18);
+      assert.strictEqual(result.pillars.modernity.breakdown.modernPhp, 2);
+      // Ensure no recommendation is made to add D11 support
+      const hasD11Rec = result.recommendations.some(r => r.topic === 'Drupal 11');
+      assert.strictEqual(hasD11Rec, false, 'Must not recommend adding D11 to a D12-ready module');
+    } finally {
+      DropScoreEngine.resetCoreSchedule();
+    }
   });
 });
