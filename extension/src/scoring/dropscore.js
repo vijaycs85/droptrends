@@ -185,24 +185,36 @@ class DropScoreEngine {
 
     let issuePoints = 3;
     const totalIssues = effectiveData.totalIssuesCount || 0;
-    const openBugs = effectiveData.openBugsCount || 0;
+    const openIssues = (typeof effectiveData.openIssuesCount === 'number') ? effectiveData.openIssuesCount : null;
+    const openBugs = (typeof effectiveData.openBugsCount === 'number') ? effectiveData.openBugsCount : 0;
     const rtbc = effectiveData.rtbcCount || 0;
 
-    let rtbcPoints = 1;
-    if (rtbc >= 5) rtbcPoints = 3;
-    else if (rtbc >= 1) rtbcPoints = 2;
-
-    let bugRatioPoints = 3;
-    if (totalIssues > 0 && openBugs >= 0) {
-      const bugRatio = openBugs / totalIssues;
-      if (bugRatio <= 0.25) bugRatioPoints = 4;
-      else if (bugRatio <= 0.50) bugRatioPoints = 3;
-      else if (bugRatio <= 0.75) bugRatioPoints = 2;
-      else bugRatioPoints = 1;
+    if (totalIssues > 0 && openIssues === 0) {
+      // Pristine queue: 100% of reported issues are resolved (Inbox Zero)
+      issuePoints = 7;
+    } else if (totalIssues > 0 && openBugs === 0) {
+      // All bugs fixed: Zero open bugs in the queue (only feature/support tasks remain)
+      const rtbcBonus = (rtbc >= 1) ? 1 : 0;
+      issuePoints = Math.min(7, 6 + rtbcBonus);
+    } else if (totalIssues === 0) {
+      // Clean slate / brand new project with no issue queue history
+      issuePoints = 6;
     } else {
-      bugRatioPoints = 3;
+      // Active backlog: Bug ratio hygiene + RTBC community velocity
+      let rtbcPoints = 1;
+      if (rtbc >= 5) rtbcPoints = 3;
+      else if (rtbc >= 1) rtbcPoints = 2;
+
+      let bugRatioPoints = 3;
+      if (totalIssues > 0 && openBugs >= 0) {
+        const bugRatio = openBugs / totalIssues;
+        if (bugRatio <= 0.25) bugRatioPoints = 4;
+        else if (bugRatio <= 0.50) bugRatioPoints = 3;
+        else if (bugRatio <= 0.75) bugRatioPoints = 2;
+        else bugRatioPoints = 1;
+      }
+      issuePoints = Math.min(7, rtbcPoints + bugRatioPoints);
     }
-    issuePoints = Math.min(7, rtbcPoints + bugRatioPoints);
 
     const maintenanceBreakdown = {
       status: statusPoints,

@@ -317,7 +317,23 @@ class DropTrendsUI {
                     },
                     {
                       text: `Queue: ${evalData.pillars.maintenance.breakdown.issues}/7`,
-                      tooltip: `Issue Queue Activity: ${evalData.pillars.maintenance.breakdown.issues}/7 pts (${rawData.rtbcCount || 0} RTBC patches, ${rawData.openBugsCount || 0} open bugs / ${rawData.totalIssuesCount || 0} total issues)`
+                      tooltip: (() => {
+                        const total = rawData.totalIssuesCount || 0;
+                        const open = (typeof rawData.openIssuesCount === 'number') ? rawData.openIssuesCount : null;
+                        const bugs = (typeof rawData.openBugsCount === 'number') ? rawData.openBugsCount : 0;
+                        const rtbc = rawData.rtbcCount || 0;
+                        const pts = evalData.pillars.maintenance.breakdown.issues;
+                        if (total > 0 && open === 0) {
+                          return `Issue Queue: ${pts}/7 pts (Inbox Zero: All ${total} issues resolved)`;
+                        }
+                        if (total > 0 && bugs === 0) {
+                          return `Issue Queue: ${pts}/7 pts (Zero open bugs across ${total} total issues)`;
+                        }
+                        if (total === 0) {
+                          return `Issue Queue: ${pts}/7 pts (Clean queue: No issues reported)`;
+                        }
+                        return `Issue Queue Activity: ${pts}/7 pts (${rtbc} RTBC patches, ${bugs} open bugs / ${total} total issues)`;
+                      })()
                     }
                   ]
                 )}
@@ -876,6 +892,25 @@ class DropTrendsUI {
         subtitle: `${maintBreakdown.recency}/8 pts`,
         description: 'No new release tags have been published in over a year. Check Git commits to see if ongoing development is occurring in dev branches.',
         action: 'Check recent Git commit activity and issue queue status.'
+      });
+    }
+
+    // Issue Queue Hygiene
+    if (rawData.totalIssuesCount > 0 && rawData.openIssuesCount === 0) {
+      insights.push({
+        severity: 'passed',
+        title: 'Inbox zero: all issues resolved',
+        subtitle: `${maintBreakdown.issues}/7 pts`,
+        description: 'Every reported issue on Drupal.org has been resolved and closed. Outstanding queue hygiene.',
+        action: null
+      });
+    } else if (rawData.totalIssuesCount > 0 && rawData.openBugsCount === 0) {
+      insights.push({
+        severity: 'passed',
+        title: 'Zero open bugs in queue',
+        subtitle: `${maintBreakdown.issues}/7 pts`,
+        description: 'All reported bugs are fixed and closed. Open issues are limited to feature requests or support tasks.',
+        action: null
       });
     }
 

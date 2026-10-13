@@ -516,4 +516,32 @@ describe('DropScore Engine Unit Tests', () => {
     // null / unknown date -> fallback 3 points
     assert.strictEqual(evaluateDropScore({ ...baseModule, lastReleaseDaysAgo: null }).pillars.maintenance.breakdown.recency, 3);
   });
+
+  it('calibrates issue queue scoring for Inbox Zero, zero bugs, and zero total issues', () => {
+    const baseModule = {
+      machineName: 'test_queue',
+      title: 'Test Queue',
+      isSecurityCovered: true,
+      maintainersCount: 2,
+      supportsDrupal11: true
+    };
+
+    // Inbox Zero: 100% of issues resolved (e.g. 50 total, 0 open) -> 7 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, totalIssuesCount: 50, openIssuesCount: 0, openBugsCount: 0, rtbcCount: 0 }).pillars.maintenance.breakdown.issues, 7);
+
+    // Zero open bugs (e.g. 20 total, 5 open support requests, 0 open bugs, 0 RTBC) -> 6 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, totalIssuesCount: 20, openIssuesCount: 5, openBugsCount: 0, rtbcCount: 0 }).pillars.maintenance.breakdown.issues, 6);
+
+    // Zero open bugs with 1 RTBC patch -> 7 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, totalIssuesCount: 20, openIssuesCount: 5, openBugsCount: 0, rtbcCount: 1 }).pillars.maintenance.breakdown.issues, 7);
+
+    // Clean slate: 0 total issues ever reported -> 6 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, totalIssuesCount: 0, openIssuesCount: 0, openBugsCount: 0, rtbcCount: 0 }).pillars.maintenance.breakdown.issues, 6);
+
+    // Standard backlog: 40 total, 8 bugs (20% <= 25% -> 4 pts), 1 RTBC (2 pts) -> 6 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, totalIssuesCount: 40, openIssuesCount: 15, openBugsCount: 8, rtbcCount: 1 }).pillars.maintenance.breakdown.issues, 6);
+
+    // Heavy bug backlog: 20 total, 18 bugs (90% > 75% -> 1 pt), 0 RTBC (1 pt) -> 2 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, totalIssuesCount: 20, openIssuesCount: 19, openBugsCount: 18, rtbcCount: 0 }).pillars.maintenance.breakdown.issues, 2);
+  });
 });
