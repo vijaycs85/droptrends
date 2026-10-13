@@ -92,13 +92,61 @@ describe('DOM Extractor Unit Tests', () => {
     assert.strictEqual(data.releases[1].version, '1.x-dev');
   });
 
-  it('excludes Drupal Core and Drupal CMS platforms from evaluation', () => {
+  it('excludes Drupal Core, Drupal CMS, and system listing paths from evaluation', () => {
     assert.strictEqual(DrupalDomExtractor.isExcludedProject('drupal'), true);
     assert.strictEqual(DrupalDomExtractor.isExcludedProject('drupal_cms'), true);
     assert.strictEqual(DrupalDomExtractor.isExcludedProject('cms'), true);
+    assert.strictEqual(DrupalDomExtractor.isExcludedProject('project_module'), true);
+    assert.strictEqual(DrupalDomExtractor.isExcludedProject('project_theme'), true);
+    assert.strictEqual(DrupalDomExtractor.isExcludedProject('modules'), true);
+    assert.strictEqual(DrupalDomExtractor.isExcludedProject('issues'), true);
+    assert.strictEqual(DrupalDomExtractor.isExcludedProject('usage'), true);
     assert.strictEqual(DrupalDomExtractor.isExcludedProject('token'), false);
     assert.strictEqual(DrupalDomExtractor.isExcludedProject('pathauto'), false);
     assert.strictEqual(DrupalDomExtractor.isExcludedProject('nightingale'), false);
+  });
+
+  it('accurately identifies genuine project pages vs listing, search, or subpages', () => {
+    // Valid project paths
+    assert.strictEqual(DrupalDomExtractor.isProjectPage(null, '/project/token'), true);
+    assert.strictEqual(DrupalDomExtractor.isProjectPage(null, '/project/flowdrop'), true);
+    assert.strictEqual(DrupalDomExtractor.isProjectPage(null, '/project/nightingale'), true);
+
+    // System browse and listing paths
+    assert.strictEqual(DrupalDomExtractor.isProjectPage(null, '/project/project_module'), false);
+    assert.strictEqual(DrupalDomExtractor.isProjectPage(null, '/project/project_theme'), false);
+    assert.strictEqual(DrupalDomExtractor.isProjectPage(null, '/project/modules'), false);
+    assert.strictEqual(DrupalDomExtractor.isProjectPage(null, '/project/issues'), false);
+    assert.strictEqual(DrupalDomExtractor.isProjectPage(null, '/project/usage'), false);
+
+    // Subpages (releases, issues, git instructions)
+    assert.strictEqual(DrupalDomExtractor.isProjectPage(null, '/project/token/releases'), false);
+    assert.strictEqual(DrupalDomExtractor.isProjectPage(null, '/project/token/issues'), false);
+    assert.strictEqual(DrupalDomExtractor.isProjectPage(null, '/project/token/git-instructions'), false);
+
+    // Core exclusions
+    assert.strictEqual(DrupalDomExtractor.isProjectPage(null, '/project/drupal'), false);
+    assert.strictEqual(DrupalDomExtractor.isProjectPage(null, '/project/drupal_cms'), false);
+
+    // DOM-level rejection on listing pages with browse form
+    const mockListingDoc = {
+      body: { className: 'page-project page-project-project-module' },
+      querySelector(sel) {
+        if (sel.includes('browse-projects-form')) return { id: 'drupalorg-browse-projects-form' };
+        return null;
+      }
+    };
+    assert.strictEqual(DrupalDomExtractor.isProjectPage(mockListingDoc, '/project/custom_listing'), false);
+
+    // DOM-level acceptance on genuine project node
+    const mockRealProjectDoc = {
+      body: { className: 'page-node node-type-project-module' },
+      querySelector(sel) {
+        if (sel.includes('.project-info')) return { textContent: 'Project info' };
+        return null;
+      }
+    };
+    assert.strictEqual(DrupalDomExtractor.isProjectPage(mockRealProjectDoc, '/project/real_module'), true);
   });
 
   it('generates accurate Composer commands across semver, pre-releases, and legacy branches', () => {

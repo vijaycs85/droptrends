@@ -6,17 +6,14 @@
   const pathname = window.location.pathname;
   if (!pathname.startsWith('/project/')) return;
 
-  const subPages = ['/project/issues', '/project/usage', '/project/modules', '/project/themes', '/project/releases'];
-  if (subPages.some(sp => pathname === sp || pathname.startsWith(sp + '/'))) {
-    const parts = pathname.split('/').filter(Boolean);
-    if (parts.length > 2) return;
-  }
-
   const parts = pathname.split('/').filter(Boolean);
-  const machineName = parts[1]?.toLowerCase();
+  // Canonical project pages are strictly /project/<machineName> (depth 2)
+  if (parts.length !== 2) return;
 
-  const EXCLUDED_PROJECTS = ['drupal', 'drupal_cms', 'cms'];
-  if (machineName && EXCLUDED_PROJECTS.includes(machineName)) {
+  const machineName = parts[1]?.toLowerCase();
+  if (!machineName) return;
+
+  if (typeof DrupalDomExtractor !== 'undefined' && DrupalDomExtractor.isExcludedProject(machineName)) {
     if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
       try {
         await chrome.runtime.sendMessage({
@@ -25,6 +22,8 @@
         });
       } catch {}
     }
+    const existing = document.getElementById('droptrends-root');
+    if (existing) existing.remove();
     return;
   }
 
@@ -32,11 +31,20 @@
     await new Promise((resolve) => document.addEventListener('DOMContentLoaded', resolve, { once: true }));
   }
 
+  // Double-check DOM authenticity to prevent running on browse forms or search views
+  if (typeof DrupalDomExtractor !== 'undefined' && !DrupalDomExtractor.isProjectPage(document, pathname)) {
+    const existing = document.getElementById('droptrends-root');
+    if (existing) existing.remove();
+    return;
+  }
+
   try {
     const rawData = DrupalDomExtractor.extract(document);
-    if (!rawData || !rawData.machineName) return;
-
-    if (EXCLUDED_PROJECTS.includes(rawData.machineName.toLowerCase())) return;
+    if (!rawData || !rawData.machineName || rawData.isExcluded) {
+      const existing = document.getElementById('droptrends-root');
+      if (existing) existing.remove();
+      return;
+    }
 
     let evaluation = DropScoreEngine.evaluate(rawData);
 

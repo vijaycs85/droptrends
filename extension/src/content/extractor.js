@@ -5,9 +5,108 @@
  */
 
 class DrupalDomExtractor {
+  static SYSTEM_PROJECT_PATHS = [
+    'project_module',
+    'project_theme',
+    'project_distribution',
+    'project_core',
+    'project_translation',
+    'project_issue',
+    'modules',
+    'themes',
+    'distributions',
+    'issues',
+    'usage',
+    'releases',
+    'comments',
+    'search',
+    'user'
+  ];
+
   static isExcludedProject(machineName) {
     if (!machineName) return false;
-    return ['drupal', 'drupal_cms', 'cms'].includes(machineName.toLowerCase());
+    const lower = machineName.toLowerCase();
+    return ['drupal', 'drupal_cms', 'cms'].includes(lower) || this.SYSTEM_PROJECT_PATHS.includes(lower);
+  }
+
+  /**
+   * Validates whether the current page is an authentic individual Drupal project page
+   * (e.g. module, theme, distribution, profile, site template, recipe) rather than a
+   * general listing, search directory, issue queue, or administration page.
+   *
+   * @param {Document} [doc=document] - DOM document
+   * @param {string} [pathname=null] - Optional pathname override
+   * @returns {boolean} True if this is an authentic project page
+   */
+  static isProjectPage(doc = (typeof document !== 'undefined' ? document : null), pathname = null) {
+    let path = pathname;
+    if (!path && typeof window !== 'undefined' && window.location) {
+      path = window.location.pathname;
+    }
+
+    if (path) {
+      if (!path.startsWith('/project/')) return false;
+      const parts = path.split('/').filter(Boolean);
+      // Canonical project overview pages must be exactly /project/<machineName> (depth 2)
+      if (parts.length !== 2) return false;
+      const machineName = parts[1].toLowerCase();
+      if (this.isExcludedProject(machineName)) return false;
+    }
+
+    if (doc) {
+      // 1. Definite negative indicators: browsing/listing search forms or search results
+      if (doc.querySelector && doc.querySelector('#drupalorg-browse-projects-form, .results-count')) {
+        return false;
+      }
+
+      const body = doc.body;
+      const bodyClass = (body ? body.className : '') || '';
+
+      // Views listing page without node context (e.g. page-project page-project-project-module)
+      if (bodyClass.includes('page-project') && !bodyClass.includes('page-node')) {
+        return false;
+      }
+
+      // 2. Positive indicators of an individual project node:
+      // a. Body class node-type-project-*
+      if (/node-type-project-(module|theme|distribution|general)/i.test(bodyClass)) {
+        return true;
+      }
+
+      // b. Node container with project class
+      if (doc.querySelector && doc.querySelector('.node-project-module, .node-project-theme, .node-project-distribution, .node-project-general, [class*="node-project-"]')) {
+        return true;
+      }
+
+      // c. Project information section (standard across all Drupal.org project pages)
+      if (doc.querySelector && doc.querySelector('.project-info, ul.project-info')) {
+        return true;
+      }
+
+      // d. Project releases table or maintainers block
+      if (doc.querySelector && doc.querySelector('.view-drupalorg-project-downloads, #project-releases, #block-drupalorg-project-maintainers')) {
+        return true;
+      }
+
+      // e. Shortlink pointing to node ID
+      if (doc.querySelector && doc.querySelector('link[rel="shortlink"][href*="/node/"]')) {
+        return true;
+      }
+
+      // If document is present and has canonical link to a project
+      const canonical = doc.querySelector ? doc.querySelector('link[rel="canonical"]') : null;
+      if (canonical && canonical.href) {
+        const m = canonical.href.match(/\/project\/([a-zA-Z0-9_\-]+)$/);
+        if (m && !this.isExcludedProject(m[1])) {
+          return true;
+        }
+      }
+
+      // If doc is provided but none of the positive project indicators exist, it is not a project page
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -17,15 +116,19 @@ class DrupalDomExtractor {
    */
   static extract(doc = document) {
     const pathname = (typeof window !== 'undefined' && window.location) ? window.location.pathname : '';
+    if (pathname && !this.isProjectPage(doc, pathname)) {
+      return null;
+    }
+
     const match = pathname.match(/\/project\/([a-zA-Z0-9_\-]+)/);
     const machineName = match ? match[1] : this.extractMachineNameFallback(doc);
 
-    // If this is Drupal Core or Drupal CMS, immediately mark as excluded
+    // If this is Drupal Core, Drupal CMS, or a system path, immediately mark as excluded
     if (this.isExcludedProject(machineName)) {
       return {
         isExcluded: true,
         machineName,
-        title: machineName === 'drupal' ? 'Drupal Core' : 'Drupal CMS'
+        title: machineName === 'drupal' ? 'Drupal Core' : (['drupal_cms', 'cms'].includes(machineName) ? 'Drupal CMS' : machineName)
       };
     }
 

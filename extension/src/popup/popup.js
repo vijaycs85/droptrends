@@ -33,8 +33,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentTab = tabs[0];
   }
 
-  const isExcluded = currentTab?.url && /\/project\/(drupal|cms|drupal_cms)(\/|$)/.test(currentTab.url);
-  const isDrupalProject = currentTab?.url && currentTab.url.includes('drupal.org/project/') && !isExcluded;
+  const SYSTEM_PATHS = [
+    'drupal', 'cms', 'drupal_cms',
+    'project_module', 'project_theme', 'project_distribution', 'project_core',
+    'project_translation', 'project_issue', 'modules', 'themes', 'distributions',
+    'issues', 'usage', 'releases', 'comments', 'search', 'user'
+  ];
+  let isDrupalProject = false;
+  if (currentTab?.url && currentTab.url.includes('drupal.org/project/')) {
+    try {
+      const urlObj = new URL(currentTab.url);
+      const urlParts = urlObj.pathname.split('/').filter(Boolean);
+      if (urlParts.length === 2 && urlParts[0] === 'project' && !SYSTEM_PATHS.includes(urlParts[1].toLowerCase())) {
+        isDrupalProject = true;
+      }
+    } catch {}
+  }
 
   if (isDrupalProject) {
     const storage = await chrome.storage.local.get(['lastViewedModule', 'recentModules']);
