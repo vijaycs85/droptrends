@@ -479,4 +479,41 @@ describe('DropScore Engine Unit Tests', () => {
     assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 20000 }).pillars.adoption.breakdown.installs, 10);
     assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 100000 }).pillars.adoption.breakdown.installs, 10);
   });
+
+  it('calibrates release recency scoring ladder accurately across all day tiers', () => {
+    const baseModule = {
+      machineName: 'test_recency',
+      title: 'Test Recency',
+      isSecurityCovered: true,
+      maintainersCount: 2,
+      supportsDrupal11: true
+    };
+
+    // <= 90 days -> 8 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, lastReleaseDaysAgo: 1 }).pillars.maintenance.breakdown.recency, 8);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, lastReleaseDaysAgo: 90 }).pillars.maintenance.breakdown.recency, 8);
+
+    // <= 120 days -> 7 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, lastReleaseDaysAgo: 91 }).pillars.maintenance.breakdown.recency, 7);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, lastReleaseDaysAgo: 120 }).pillars.maintenance.breakdown.recency, 7);
+
+    // <= 180 days -> 5 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, lastReleaseDaysAgo: 121 }).pillars.maintenance.breakdown.recency, 5);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, lastReleaseDaysAgo: 180 }).pillars.maintenance.breakdown.recency, 5);
+
+    // <= 365 days (1 year) -> 3 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, lastReleaseDaysAgo: 181 }).pillars.maintenance.breakdown.recency, 3);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, lastReleaseDaysAgo: 365 }).pillars.maintenance.breakdown.recency, 3);
+
+    // <= 730 days (2 years) -> 1 point
+    assert.strictEqual(evaluateDropScore({ ...baseModule, lastReleaseDaysAgo: 366 }).pillars.maintenance.breakdown.recency, 1);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, lastReleaseDaysAgo: 730 }).pillars.maintenance.breakdown.recency, 1);
+
+    // > 730 days (> 2 years) -> 0 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, lastReleaseDaysAgo: 731 }).pillars.maintenance.breakdown.recency, 0);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, lastReleaseDaysAgo: 1200 }).pillars.maintenance.breakdown.recency, 0);
+
+    // null / unknown date -> fallback 3 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, lastReleaseDaysAgo: null }).pillars.maintenance.breakdown.recency, 3);
+  });
 });

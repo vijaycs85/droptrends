@@ -173,8 +173,8 @@ class DropScoreEngine {
     let recencyPoints = 0;
     const daysAgo = typeof effectiveData.lastReleaseDaysAgo === 'number' ? effectiveData.lastReleaseDaysAgo : null;
     if (daysAgo !== null) {
-      if (daysAgo <= 30) recencyPoints = 8;
-      else if (daysAgo <= 90) recencyPoints = 7;
+      if (daysAgo <= 90) recencyPoints = 8;
+      else if (daysAgo <= 120) recencyPoints = 7;
       else if (daysAgo <= 180) recencyPoints = 5;
       else if (daysAgo <= 365) recencyPoints = 3;
       else if (daysAgo <= 730) recencyPoints = 1;
@@ -461,7 +461,7 @@ class DropScoreEngine {
       });
     }
 
-    if (daysAgo !== null && daysAgo <= 45) {
+    if (daysAgo !== null && daysAgo <= 90) {
       flags.push({
         type: 'positive',
         icon: 'zap',
