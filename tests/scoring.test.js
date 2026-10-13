@@ -169,4 +169,99 @@ describe('DropScore Engine Unit Tests', () => {
     const hasPhpRecommendation = result.recommendations.some(r => r.topic === 'PHP 8.3+');
     assert.strictEqual(hasPhpRecommendation, false);
   });
+
+  it('flags Drupal 10-only modules with EOL warning badge and recommendation', () => {
+    const mockD10Only = {
+      machineName: 'd10_only_mod',
+      title: 'Drupal 10 Only Module',
+      isSecurityCovered: true,
+      activeInstalls: 3500,
+      lastReleaseDaysAgo: 40,
+      supportsDrupal12: false,
+      supportsDrupal11: false,
+      supportsDrupal10: true,
+      maintainersCount: 2,
+      sponsorsCount: 1,
+      gitlabPipelineStatus: 'passed',
+      hasAutomatedTests: true
+    };
+
+    const result = evaluateDropScore(mockD10Only);
+    // D10 gives 6 pts (out of 20)
+    assert.strictEqual(result.pillars.modernity.score, 6);
+    assert.strictEqual(result.pillars.modernity.breakdown.drupal10, 6);
+    assert.strictEqual(result.pillars.modernity.breakdown.drupal11, 0);
+
+    // Verify warning flag for D10 reaching EOL in Nov 2026
+    const eolFlag = result.flags.find(f => f.text.includes('D10 Only (EOL Nov 2026)'));
+    assert.ok(eolFlag, 'Expected D10 Only (EOL Nov 2026) flag to be present');
+    assert.strictEqual(eolFlag.type, 'warning');
+
+    // Verify recommendation for Drupal 10 EOL
+    const eolRec = result.recommendations.find(r => r.topic === 'Drupal 10 EOL');
+    assert.ok(eolRec, 'Expected Drupal 10 EOL recommendation to be present');
+    assert.ok(eolRec.action.includes('November 2026'));
+  });
+
+  it('recognizes Drupal 12 forward-compatibility and awards top modernity priority', () => {
+    const mockD12Module = {
+      machineName: 'd12_mod',
+      title: 'Drupal 12 Forward-Compatible Module',
+      isSecurityCovered: true,
+      activeInstalls: 12000,
+      lastReleaseDaysAgo: 10,
+      supportsDrupal12: true,
+      supportsDrupal11: true,
+      supportsDrupal10: true,
+      maintainersCount: 3,
+      sponsorsCount: 2,
+      gitlabPipelineStatus: 'passed',
+      hasAutomatedTests: true
+    };
+
+    const result = evaluateDropScore(mockD12Module);
+    assert.strictEqual(result.pillars.modernity.score, 20);
+    assert.strictEqual(result.pillars.modernity.breakdown.drupal12, 12);
+
+    // Verify Drupal 12 Ready flag
+    const d12Flag = result.flags.find(f => f.text === 'Drupal 12 Ready');
+    assert.ok(d12Flag, 'Expected Drupal 12 Ready flag');
+    assert.strictEqual(d12Flag.type, 'positive');
+  });
+
+  it('supports updating core schedule when Drupal 12 releases to prioritize D12', () => {
+    const { DropScoreEngine } = globalThis;
+    try {
+      // Simulate Drupal 12 release era where D12 is active and D11 is LTS
+      DropScoreEngine.setCoreSchedule({
+        activeMajor: 12,
+        upcomingMajor: 13,
+        leavingSupportMajor: 11
+      });
+
+      const mockModule = {
+        machineName: 'future_test',
+        title: 'Future Test',
+        isSecurityCovered: true,
+        activeInstalls: 1000,
+        lastReleaseDaysAgo: 5,
+        supportsDrupal12: true,
+        supportsDrupal11: true,
+        supportsDrupal10: true,
+        maintainersCount: 2,
+        sponsorsCount: 1,
+        gitlabPipelineStatus: 'passed',
+        hasAutomatedTests: true
+      };
+
+      const result = evaluateDropScore(mockModule);
+      assert.strictEqual(result.pillars.modernity.score, 20);
+      assert.strictEqual(result.pillars.modernity.breakdown.drupal12, 12);
+      assert.strictEqual(result.pillars.modernity.breakdown.drupal11, 6); // D11 is now LTS (6 pts)
+      assert.strictEqual(result.pillars.modernity.breakdown.drupal10, 0); // D10 is now EOL (0 pts)
+    } finally {
+      // Reset back to default schedule
+      DropScoreEngine.resetCoreSchedule();
+    }
+  });
 });

@@ -78,7 +78,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       secTag.textContent = rawData.isSecurityCovered ? 'Security Covered' : 'No Shield';
       secTag.className = rawData.isSecurityCovered ? 'dt-tag dt-tag-sec' : 'dt-tag dt-tag-warn';
 
-      d11Tag.textContent = rawData.supportsDrupal11 ? 'D11 Ready' : (rawData.supportsDrupal10 ? 'D10 Ready' : 'Legacy');
+      // Determine Drupal Core Readiness Tag
+      let coreText = 'Legacy';
+      let coreClass = 'dt-tag dt-tag-crit';
+
+      if (rawData.supportsDrupal12) {
+        coreText = 'D12 Ready';
+        coreClass = 'dt-tag dt-tag-d12';
+      } else if (rawData.supportsDrupal11) {
+        coreText = 'D11 Ready';
+        coreClass = 'dt-tag dt-tag-d11';
+      } else if (rawData.supportsDrupal10) {
+        coreText = "D10 (EOL Nov '26)";
+        coreClass = 'dt-tag dt-tag-warn';
+      }
+
+      d11Tag.textContent = coreText;
+      d11Tag.className = coreClass;
 
       pillarSec.textContent = `${evaluation.pillars.security.score}/25`;
       pillarMaint.textContent = `${evaluation.pillars.maintenance.score}/25`;

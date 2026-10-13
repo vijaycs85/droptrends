@@ -388,6 +388,23 @@ describe('DOM Extractor Unit Tests', () => {
     assert.strictEqual(gitlabInfo.defaultBranch, '8.x-1.x');
     assert.strictEqual(gitlabInfo.pipelineStatus, 'passed');
   });
+
+  it('accurately extracts Drupal 12 compatibility from release and page text', () => {
+    const mockDoc = {
+      querySelector(selector) {
+        if (selector === '#content') {
+          return { textContent: 'Compatible with Drupal 12 and Drupal 11. core: ^11 || ^12' };
+        }
+        return null;
+      },
+      querySelectorAll() { return []; }
+    };
+
+    const compat = DrupalDomExtractor.extractPageCompatibility(mockDoc);
+    assert.strictEqual(compat.supportsD12, true);
+    assert.strictEqual(compat.supportsD11, true);
+    assert.strictEqual(compat.modernPhp, true); // Inherited from D11/D12
+  });
 });
 
 

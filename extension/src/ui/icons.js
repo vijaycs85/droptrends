@@ -41,6 +41,13 @@ const DropIcons = {
     `, { size, className, color });
   },
 
+  clock({ size = 16, className = '', color = '#d97706' } = {}) {
+    return this.svg(`
+      <circle cx="12" cy="12" r="10"/>
+      <polyline points="12 6 12 12 16 14"/>
+    `, { size, className, color });
+  },
+
   rocket({ size = 16, className = '', color = '#2563eb' } = {}) {
     return this.svg(`
       <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>

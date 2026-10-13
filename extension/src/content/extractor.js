@@ -171,8 +171,9 @@ class DrupalDomExtractor {
       lastReleaseDate: recommendedRelease?.dateString || null,
       lastReleaseDaysAgo: recommendedRelease?.daysAgo ?? null,
       composerCommand: recommendedRelease?.composerCommand || DrupalDomExtractor.generateComposerCommand(machineName, recommendedRelease?.version, recommendedRelease?.isStable),
-      supportsDrupal11: recommendedRelease?.supportsD11 || pageCompatibility.supportsD11,
-      supportsDrupal10: recommendedRelease?.supportsD10 || pageCompatibility.supportsD10,
+      supportsDrupal12: recommendedRelease?.supportsD12 || pageCompatibility.supportsD12 || false,
+      supportsDrupal11: recommendedRelease?.supportsD11 || pageCompatibility.supportsD11 || false,
+      supportsDrupal10: recommendedRelease?.supportsD10 || pageCompatibility.supportsD10 || false,
       modernPhpSupported: recommendedRelease?.modernPhp || pageCompatibility.modernPhp,
       isRecipeReady: recommendedRelease?.recipeReady || pageCompatibility.recipeReady,
       compatibilityStrings: recommendedRelease?.compatibilityStrings || pageCompatibility.strings,
@@ -406,6 +407,7 @@ class DrupalDomExtractor {
 
       const rowText = el.textContent;
       const compatStrings = [];
+      let supportsD12 = false;
       let supportsD11 = false;
       let supportsD10 = false;
       let modernPhp = false;
@@ -415,14 +417,16 @@ class DrupalDomExtractor {
       if (worksWithMatch) {
         const str = worksWithMatch[1].trim();
         compatStrings.push(str);
+        if (/\^12|~12|12\./.test(str)) supportsD12 = true;
         if (/\^11|~11|11\./.test(str)) supportsD11 = true;
         if (/\^10|~10|10\./.test(str)) supportsD10 = true;
       }
 
+      if (/\bdrupal12\b|\bdrupal-12\b|\bDrupal 12\b|\^12\b/.test(rowText)) supportsD12 = true;
       if (/\bdrupal11\b|\bdrupal-11\b|\bDrupal 11\b|\^11\b/.test(rowText)) supportsD11 = true;
       if (/\bdrupal10\b|\bdrupal-10\b|\bDrupal 10\b|\^10\b/.test(rowText)) supportsD10 = true;
-      // Drupal 11 has a minimum requirement of PHP 8.3; D11 support guarantees PHP 8.3+
-      if (supportsD11 || /PHP\s*8\.[3-9]/i.test(rowText)) modernPhp = true;
+      // Drupal 11 & 12 have a minimum requirement of PHP 8.3; D11/D12 support guarantees PHP 8.3+
+      if (supportsD12 || supportsD11 || /PHP\s*8\.[3-9]/i.test(rowText)) modernPhp = true;
       if (/recipe|drupal cms/i.test(rowText)) recipeReady = true;
 
       const pipelineEl = el.querySelector('p.pipeline-result');
@@ -437,6 +441,7 @@ class DrupalDomExtractor {
         daysAgo,
         composerCommand,
         compatibilityStrings: compatStrings,
+        supportsD12,
         supportsD11,
         supportsD10,
         modernPhp,
@@ -496,11 +501,16 @@ class DrupalDomExtractor {
     const pageText = doc.querySelector('#content') ? doc.querySelector('#content').textContent : (doc.body ? doc.body.textContent : '');
     const strings = [];
 
+    let supportsD12 = false;
     let supportsD11 = false;
     let supportsD10 = false;
     let modernPhp = false;
     let recipeReady = false;
 
+    if (/\bdrupal12\b|\bdrupal-12\b|\bDrupal 12\b|\^12\b|\bcore: \^12\b/.test(pageText)) {
+      supportsD12 = true;
+      strings.push('Drupal 12');
+    }
     if (/\bdrupal11\b|\bdrupal-11\b|\bDrupal 11\b|\^11\b|\bcore: \^11\b/.test(pageText)) {
       supportsD11 = true;
       strings.push('Drupal 11');
@@ -509,15 +519,15 @@ class DrupalDomExtractor {
       supportsD10 = true;
       strings.push('Drupal 10');
     }
-    // Drupal 11 requires PHP 8.3 minimum; if D11 is supported, PHP 8.3+ is inherently supported
-    if (supportsD11 || /PHP\s*8\.[3-9]/i.test(pageText)) {
+    // Drupal 11 & 12 require PHP 8.3 minimum; if D11 or D12 is supported, PHP 8.3+ is inherently supported
+    if (supportsD12 || supportsD11 || /PHP\s*8\.[3-9]/i.test(pageText)) {
       modernPhp = true;
     }
     if (/recipe|Recipe|Drupal CMS|Site template/i.test(pageText)) {
       recipeReady = true;
     }
 
-    return { strings, supportsD11, supportsD10, modernPhp, recipeReady };
+    return { strings, supportsD12, supportsD11, supportsD10, modernPhp, recipeReady };
   }
 
   static extractMaintenanceStatus(doc) {

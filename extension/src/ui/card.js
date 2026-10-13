@@ -67,13 +67,15 @@ class DropTrendsUI {
 
     const renderPillContent = (evalData) => {
       const isCovered = evalData.pillars.security.breakdown.coverage > 0;
-      const isD11 = evalData.pillars.modernity.breakdown.drupal11 > 0;
-      const isD10 = evalData.pillars.modernity.breakdown.drupal10 > 0;
+      const isD12 = (evalData.pillars.modernity.breakdown.drupal12 || 0) > 0;
+      const isD11 = (evalData.pillars.modernity.breakdown.drupal11 || 0) > 0;
+      const isD10 = (evalData.pillars.modernity.breakdown.drupal10 || 0) > 0;
 
       const shieldIcon = isCovered
         ? icons.shieldCheck({ size: 13, color: '#047857' })
         : icons.shieldAlert({ size: 13, color: '#b45309' });
 
+      const d12Icon = icons.rocket({ size: 13, color: '#6d28d9' });
       const d11Icon = icons.rocket({ size: 13, color: '#1d4ed8' });
 
       return `
@@ -93,9 +95,15 @@ class DropTrendsUI {
         </div>
 
         <div class="dt-seg dt-seg-compat">
-          ${isD11
-            ? `<span class="dt-chip dt-chip-d11">${d11Icon}<span>D11</span></span>`
-            : (isD10 ? '<span class="dt-chip dt-chip-d10"><span>D10</span></span>' : '<span class="dt-chip dt-chip-legacy"><span>Legacy</span></span>')
+          ${isD12
+            ? `<span class="dt-chip dt-chip-d12">${d12Icon}<span>D12</span></span>`
+            : (isD11
+              ? `<span class="dt-chip dt-chip-d11">${d11Icon}<span>D11</span></span>`
+              : (isD10
+                ? `<span class="dt-chip dt-chip-d10-eol" title="Drupal 10 reaches End-of-Life in November 2026">${icons.clock({ size: 11, color: '#b45309' })}<span>D10 (EOL Nov)</span></span>`
+                : '<span class="dt-chip dt-chip-legacy"><span>Legacy</span></span>'
+              )
+            )
           }
         </div>
 
@@ -226,7 +234,8 @@ class DropTrendsUI {
                   'Modernity & Compatibility',
                   evalData.pillars.modernity.score,
                   20,
-                  `Drupal 11: ${evalData.pillars.modernity.breakdown.drupal11}/12 · Drupal 10: ${evalData.pillars.modernity.breakdown.drupal10}/6 · PHP 8.3+: ${evalData.pillars.modernity.breakdown.modernPhp}/2`
+                  evalData.pillars.modernity.breakdown.summaryText ||
+                  `Drupal 11: ${evalData.pillars.modernity.breakdown.drupal11}/12 · Drupal 10 (EOL Nov '26): ${evalData.pillars.modernity.breakdown.drupal10}/6 · PHP 8.3+: ${evalData.pillars.modernity.breakdown.modernPhp}/2`
                 )}
                 ${this.renderPillarRow(
                   icons.flask({ size: 14, color: '#0891b2' }),
@@ -261,7 +270,9 @@ class DropTrendsUI {
                   let flagIcon = icons.checkCircle({ size: 13, color: '#059669' });
                   if (f.text.includes('Emerging')) flagIcon = icons.sprout({ size: 13, color: '#047857' });
                   else if (f.text.includes('Security')) flagIcon = f.type === 'positive' ? icons.shieldCheck({ size: 13, color: '#059669' }) : icons.shieldAlert({ size: 13, color: '#b45309' });
+                  else if (f.text.includes('Drupal 12')) flagIcon = icons.rocket({ size: 13, color: '#6d28d9' });
                   else if (f.text.includes('Drupal 11')) flagIcon = icons.rocket({ size: 13, color: '#2563eb' });
+                  else if (f.text.includes('D10 Only') || f.text.includes('EOL')) flagIcon = icons.clock({ size: 13, color: '#d97706' });
                   else if (f.text.includes('Recently Released') || f.text.includes('Stale')) flagIcon = icons.zap({ size: 13, color: '#d97706' });
                   else if (f.type === 'warning') flagIcon = icons.alertTriangle({ size: 13, color: '#d97706' });
                   else if (f.type === 'critical') flagIcon = icons.alertCircle({ size: 13, color: '#dc2626' });
@@ -425,14 +436,18 @@ class DropTrendsUI {
         host.appendChild(secSpan);
       }
 
-      if (rel.supportsD11 || rel.supportsD10) {
+      if (rel.supportsD12 || rel.supportsD11 || rel.supportsD10) {
         const compatSpan = document.createElement('span');
-        if (rel.supportsD11) {
+        if (rel.supportsD12) {
+          compatSpan.style.cssText = 'background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe;padding:1px 5px;border-radius:4px;font-weight:600;';
+          compatSpan.textContent = 'D12';
+        } else if (rel.supportsD11) {
           compatSpan.style.cssText = 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:1px 5px;border-radius:4px;font-weight:600;';
           compatSpan.textContent = 'D11';
         } else {
-          compatSpan.style.cssText = 'background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:1px 5px;border-radius:4px;font-weight:600;';
-          compatSpan.textContent = 'D10';
+          compatSpan.style.cssText = 'background:#fffbeb;color:#b45309;border:1px solid #fde68a;padding:1px 5px;border-radius:4px;font-weight:600;';
+          compatSpan.textContent = 'D10 (EOL Nov)';
+          compatSpan.title = 'Drupal 10 reaches End-of-Life in November 2026';
         }
         host.appendChild(compatSpan);
       }
@@ -546,8 +561,10 @@ class DropTrendsUI {
       }
       .dt-chip-sec { color: #047857; }
       .dt-chip-warn { color: #b45309; }
+      .dt-chip-d12 { color: #6d28d9; }
       .dt-chip-d11 { color: #1d4ed8; }
       .dt-chip-d10 { color: #475569; }
+      .dt-chip-d10-eol { color: #b45309; font-weight: 700; }
       .dt-chip-legacy { color: #94a3b8; }
       .dt-ver-text {
         font-size: 11px;

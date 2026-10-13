@@ -5,7 +5,33 @@
  * and properly prioritizes stable releases over pre-release alphas/betas.
  */
 
+const DEFAULT_DRUPAL_CORE_SCHEDULE = {
+  activeMajor: 11,
+  upcomingMajor: 12,
+  leavingSupportMajor: 10,
+  leavingSupportDate: 'November 2026',
+  versions: {
+    12: { major: 12, label: 'Drupal 12', minPhp: '8.3+', status: 'upcoming' },
+    11: { major: 11, label: 'Drupal 11', minPhp: '8.3+', status: 'active' },
+    10: { major: 10, label: 'Drupal 10', minPhp: '8.1+', status: 'leaving_support', eolDate: 'November 2026' }
+  }
+};
+
 class DropScoreEngine {
+  static coreSchedule = { ...DEFAULT_DRUPAL_CORE_SCHEDULE };
+
+  static getCoreSchedule() {
+    return { ...this.coreSchedule };
+  }
+
+  static setCoreSchedule(customSchedule) {
+    this.coreSchedule = { ...this.coreSchedule, ...customSchedule };
+  }
+
+  static resetCoreSchedule() {
+    this.coreSchedule = { ...DEFAULT_DRUPAL_CORE_SCHEDULE };
+  }
+
   /**
    * Evaluate a module given extracted/enriched metadata.
    * @param {Object} data - Module signals conforming to RawModuleData / EnrichedModuleData
@@ -23,11 +49,12 @@ class DropScoreEngine {
     const effectiveData = {
       ...data,
       isSecurityCovered: (activeRelease?.isSecurityCovered !== undefined) ? activeRelease.isSecurityCovered : data.isSecurityCovered,
-      supportsDrupal11: (activeRelease?.supportsD11 !== undefined) ? (activeRelease.supportsD11 || data.supportsDrupal11) : data.supportsDrupal11,
-      supportsDrupal10: (activeRelease?.supportsD10 !== undefined) ? (activeRelease.supportsD10 || data.supportsDrupal10) : data.supportsDrupal10,
+      supportsDrupal12: (activeRelease?.supportsD12 !== undefined) ? (activeRelease.supportsD12 || data.supportsDrupal12) : Boolean(data.supportsDrupal12),
+      supportsDrupal11: (activeRelease?.supportsD11 !== undefined) ? (activeRelease.supportsD11 || data.supportsDrupal11) : Boolean(data.supportsDrupal11),
+      supportsDrupal10: (activeRelease?.supportsD10 !== undefined) ? (activeRelease.supportsD10 || data.supportsDrupal10) : Boolean(data.supportsDrupal10),
       modernPhpSupported: (activeRelease?.modernPhp !== undefined)
-        ? (activeRelease.modernPhp || Boolean(activeRelease.supportsD11) || data.modernPhpSupported)
-        : (Boolean(data.supportsDrupal11) || data.modernPhpSupported),
+        ? (activeRelease.modernPhp || Boolean(activeRelease.supportsD12) || Boolean(activeRelease.supportsD11) || data.modernPhpSupported)
+        : (Boolean(data.supportsDrupal12) || Boolean(data.supportsDrupal11) || data.modernPhpSupported),
       lastReleaseDaysAgo: (activeRelease?.daysAgo !== undefined && activeRelease.daysAgo !== null) ? activeRelease.daysAgo : data.lastReleaseDaysAgo,
       activeVersion: activeRelease?.version || data.latestVersion || 'Latest'
     };
@@ -120,17 +147,49 @@ class DropScoreEngine {
     let maintenanceScore = Math.max(0, Math.min(25, statusPoints + recencyPoints + issuePoints));
 
     // 3. Pillar: Modernity & Compatibility (20 pts)
-    const d11Points = effectiveData.supportsDrupal11 ? 12 : 0;
-    const d10Points = effectiveData.supportsDrupal10 ? 6 : 0;
-    // Drupal 11 has a minimum requirement of PHP 8.3; D11 support guarantees PHP 8.3+
-    const phpPoints = (effectiveData.supportsDrupal11 || effectiveData.modernPhpSupported) ? 2 : 0;
+    const schedule = DropScoreEngine.coreSchedule || DEFAULT_DRUPAL_CORE_SCHEDULE;
+    const isD12Active = schedule.activeMajor >= 12;
+
+    const hasD12 = Boolean(effectiveData.supportsDrupal12);
+    const hasD11 = Boolean(effectiveData.supportsDrupal11);
+    const hasD10 = Boolean(effectiveData.supportsDrupal10);
+    // Drupal 11 & 12 require PHP 8.3 minimum; D11/D12 support guarantees PHP 8.3+
+    const hasModernPhp = hasD12 || hasD11 || Boolean(effectiveData.modernPhpSupported);
+
+    let activeCorePoints = 0;
+    let ltsCorePoints = 0;
+    let phpPoints = hasModernPhp ? 2 : 0;
+    let summaryText = '';
+
+    if (isD12Active) {
+      // Future era when Drupal 12 is released and primary
+      // Drupal 12: 12 pts (primary)
+      // Drupal 11: 6 pts (LTS)
+      // Drupal 10: 0 pts (fully EOL)
+      activeCorePoints = hasD12 ? 12 : 0;
+      ltsCorePoints = hasD11 ? 6 : 0;
+      summaryText = `Drupal 12: ${activeCorePoints}/12 · Drupal 11 (LTS): ${ltsCorePoints}/6 · PHP 8.3+: ${phpPoints}/2`;
+    } else {
+      // Current era: Drupal 11 active, D12 upcoming, D10 leaving support in Nov 2026
+      // Supporting Drupal 12 or Drupal 11 awards the primary 12 pts
+      activeCorePoints = (hasD12 || hasD11) ? 12 : 0;
+      ltsCorePoints = hasD10 ? 6 : 0;
+      const primaryLabel = hasD12 ? 'Drupal 12/11' : 'Drupal 11';
+      summaryText = `${primaryLabel}: ${activeCorePoints}/12 · Drupal 10 (EOL Nov '26): ${ltsCorePoints}/6 · PHP 8.3+: ${phpPoints}/2`;
+    }
+
+    const modernityScore = Math.max(0, Math.min(20, activeCorePoints + ltsCorePoints + phpPoints));
 
     const modernityBreakdown = {
-      drupal11: d11Points,
-      drupal10: d10Points,
-      modernPhp: phpPoints
+      drupal12: hasD12 ? (isD12Active ? activeCorePoints : 12) : 0,
+      drupal11: hasD11 ? (isD12Active ? ltsCorePoints : activeCorePoints) : 0,
+      drupal10: hasD10 ? (isD12Active ? 0 : ltsCorePoints) : 0,
+      modernPhp: phpPoints,
+      activeCore: activeCorePoints,
+      ltsCore: ltsCorePoints,
+      summaryText,
+      d10EolNotice: 'November 2026'
     };
-    let modernityScore = Math.max(0, Math.min(20, d11Points + d10Points + phpPoints));
 
     // 4. Pillar: Code Quality & CI (15 pts)
     let pipelinePoints = 4;
@@ -239,26 +298,35 @@ class DropScoreEngine {
       });
     }
 
-    if (effectiveData.supportsDrupal11) {
+    if (hasD12) {
+      flags.push({
+        type: 'positive',
+        icon: 'rocket',
+        text: 'Drupal 12 Ready',
+        description: 'Forward-compatible with upcoming Drupal 12 core.'
+      });
+    }
+
+    if (hasD11) {
       flags.push({
         type: 'positive',
         icon: 'rocket',
         text: 'Drupal 11 Ready',
         description: 'Compatible with Drupal 11 core.'
       });
-    } else if (effectiveData.supportsDrupal10) {
+    } else if (hasD10) {
       flags.push({
         type: 'warning',
         icon: 'clock',
-        text: 'Drupal 10 Only',
-        description: 'Compatible with Drupal 10; Drupal 11 not yet tagged.'
+        text: 'D10 Only (EOL Nov 2026)',
+        description: 'Compatible with Drupal 10 only. Drupal 10 reaches End-of-Life in November 2026; upgrade to Drupal 11+ is urgently needed before support terminates.'
       });
     } else {
       flags.push({
         type: 'critical',
         icon: 'alertCircle',
         text: 'Legacy Only',
-        description: 'No modern Drupal 10 or 11 compatibility found.'
+        description: 'No modern Drupal 10, 11, or 12 compatibility found.'
       });
     }
 
@@ -369,23 +437,46 @@ class DropScoreEngine {
     }
 
     // 3. Modernity & Compatibility Recommendations
-    if (!effectiveData.supportsDrupal11) {
-      recommendations.push({
-        topic: 'Drupal 11',
-        action: 'Missing Drupal 11 support. Update core_version_requirement to ^10 || ^11 in .info.yml and test against D11 core (+12 pts).'
-      });
-    }
-    if (!effectiveData.supportsDrupal10) {
-      recommendations.push({
-        topic: 'Drupal 10',
-        action: 'Missing Drupal 10 support. Run mglaman/drupal-check or Upgrade Status to fix deprecated APIs (+6 pts).'
-      });
-    }
-    if (!effectiveData.supportsDrupal11 && !effectiveData.modernPhpSupported) {
-      recommendations.push({
-        topic: 'PHP 8.3+',
-        action: 'Ensure codebase is tested against PHP 8.3 and PHP 8.4 runtimes (Drupal 11 baseline) to prevent runtime deprecation warnings (+2 pts).'
-      });
+    if (isD12Active) {
+      if (!hasD12) {
+        recommendations.push({
+          topic: 'Drupal 12',
+          action: 'Missing Drupal 12 support. Update core_version_requirement to include ^12 in .info.yml and test against D12 core (+12 pts).'
+        });
+      }
+      if (!hasD11) {
+        recommendations.push({
+          topic: 'Drupal 11',
+          action: 'Missing Drupal 11 LTS support. Run Upgrade Status or drupal-check to resolve deprecated APIs (+6 pts).'
+        });
+      }
+    } else {
+      // D11 active era
+      if (!hasD11 && !hasD12) {
+        if (hasD10) {
+          recommendations.push({
+            topic: 'Drupal 10 EOL',
+            action: 'Drupal 10 reaches End-of-Life in November 2026. This module lacks Drupal 11+ compatibility. Update core_version_requirement to ^10 || ^11 and test against D11 to prevent site upgrade blockers (+12 pts).'
+          });
+        } else {
+          recommendations.push({
+            topic: 'Drupal 11',
+            action: 'Missing Drupal 11 support. Update core_version_requirement to ^10 || ^11 in .info.yml and test against D11 core (+12 pts).'
+          });
+        }
+      }
+      if (!hasD10 && !hasD12) {
+        recommendations.push({
+          topic: 'Drupal 10',
+          action: 'Missing Drupal 10 support. Run mglaman/drupal-check or Upgrade Status to fix deprecated APIs (+6 pts).'
+        });
+      }
+      if (!hasD11 && !hasD12 && !hasModernPhp) {
+        recommendations.push({
+          topic: 'PHP 8.3+',
+          action: 'Ensure codebase is tested against PHP 8.3 and PHP 8.4 runtimes (Drupal 11 baseline) to prevent runtime deprecation warnings (+2 pts).'
+        });
+      }
     }
 
     // 4. Code Quality & CI Recommendations
@@ -466,4 +557,5 @@ function evaluateDropScore(data, targetVersion = null) {
 if (typeof globalThis !== 'undefined') {
   globalThis.DropScoreEngine = DropScoreEngine;
   globalThis.evaluateDropScore = evaluateDropScore;
+  globalThis.DEFAULT_DRUPAL_CORE_SCHEDULE = DEFAULT_DRUPAL_CORE_SCHEDULE;
 }
