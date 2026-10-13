@@ -6,6 +6,16 @@
 
 class DropTrendsUI {
   /**
+   * Safely parses and injects HTML content via DOMParser, avoiding raw innerHTML assignment.
+   * @param {Element} element
+   * @param {string} htmlString
+   */
+  static setSafeHTML(element, htmlString) {
+    const doc = new DOMParser().parseFromString(htmlString, 'text/html');
+    element.replaceChildren(...Array.from(doc.body.childNodes));
+  }
+
+  /**
    * Mounts DropTrends UI to the page.
    * @param {Object} rawData - Extracted module data
    * @param {Object} evaluation - Evaluated DropScore report
@@ -80,7 +90,7 @@ class DropTrendsUI {
       `;
     };
 
-    pill.innerHTML = renderPillContent(currentEvaluation);
+    this.setSafeHTML(pill, renderPillContent(currentEvaluation));
 
     // Modal Drawer (Linear-grade, ultra-compact)
     const modalOverlay = document.createElement('div');
@@ -273,7 +283,7 @@ class DropTrendsUI {
       `;
     };
 
-    modalOverlay.innerHTML = renderDrawerContent(currentEvaluation, currentVersion);
+    this.setSafeHTML(modalOverlay, renderDrawerContent(currentEvaluation, currentVersion));
     shadow.appendChild(pill);
     shadow.appendChild(modalOverlay);
 
@@ -312,8 +322,8 @@ class DropTrendsUI {
           currentVersion = selectedVer;
           currentEvaluation = DropScoreEngine.evaluate(rawData, selectedVer);
 
-          modalOverlay.innerHTML = renderDrawerContent(currentEvaluation, currentVersion);
-          pill.innerHTML = renderPillContent(currentEvaluation);
+          this.setSafeHTML(modalOverlay, renderDrawerContent(currentEvaluation, currentVersion));
+          this.setSafeHTML(pill, renderPillContent(currentEvaluation));
           setupEvents();
           modalOverlay.classList.add('dt-active');
         };
@@ -337,11 +347,11 @@ class DropTrendsUI {
               await navigator.clipboard.writeText(cmd);
               if (copyBtn) copyBtn.classList.add('dt-copied');
               if (copyLabel) copyLabel.textContent = 'Copied!';
-              if (copyIconWrap) copyIconWrap.innerHTML = icons.check({ size: 12, color: '#ffffff' });
+              if (copyIconWrap) this.setSafeHTML(copyIconWrap, icons.check({ size: 12, color: '#ffffff' }));
               setTimeout(() => {
                 if (copyBtn) copyBtn.classList.remove('dt-copied');
                 if (copyLabel) copyLabel.textContent = 'Copy';
-                if (copyIconWrap) copyIconWrap.innerHTML = icons.copy({ size: 12, color: 'currentColor' });
+                if (copyIconWrap) this.setSafeHTML(copyIconWrap, icons.copy({ size: 12, color: 'currentColor' }));
               }, 2000);
             } catch (err) {
               console.warn('[DropTrends] Clipboard write failed:', err);
@@ -383,15 +393,24 @@ class DropTrendsUI {
       host.style.verticalAlign = 'middle';
       host.style.fontSize = '11px';
 
-      const d11Chip = rel.supportsD11
-        ? '<span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:1px 5px;border-radius:4px;font-weight:600;">D11</span>'
-        : (rel.supportsD10 ? '<span style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:1px 5px;border-radius:4px;font-weight:600;">D10</span>' : '');
+      if (rel.isSecurityCovered) {
+        const secSpan = document.createElement('span');
+        secSpan.style.cssText = 'background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:1px 5px;border-radius:4px;font-weight:600;';
+        secSpan.textContent = 'Covered';
+        host.appendChild(secSpan);
+      }
 
-      const secChip = rel.isSecurityCovered
-        ? '<span style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:1px 5px;border-radius:4px;font-weight:600;">Covered</span>'
-        : '';
-
-      host.innerHTML = `${secChip} ${d11Chip}`;
+      if (rel.supportsD11 || rel.supportsD10) {
+        const compatSpan = document.createElement('span');
+        if (rel.supportsD11) {
+          compatSpan.style.cssText = 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:1px 5px;border-radius:4px;font-weight:600;';
+          compatSpan.textContent = 'D11';
+        } else {
+          compatSpan.style.cssText = 'background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:1px 5px;border-radius:4px;font-weight:600;';
+          compatSpan.textContent = 'D10';
+        }
+        host.appendChild(compatSpan);
+      }
 
       const versionCol = rel.el.querySelector('.views-field-field-release-version, .views-field-created');
       if (versionCol) {

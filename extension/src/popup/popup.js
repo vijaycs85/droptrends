@@ -114,14 +114,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { recentModules = [] } = await chrome.storage.local.get('recentModules');
     if (recentModules.length > 0) {
       recentSection.classList.remove('dt-hidden');
-      recentList.innerHTML = '';
+      recentList.replaceChildren();
       for (const mod of recentModules.slice(0, 5)) {
         const li = document.createElement('li');
         li.className = 'dt-recent-item';
-        li.innerHTML = `
-          <span><strong>${mod.machineName}</strong></span>
-          <span style="color: ${mod.gradeColor}; font-weight: 700;">${mod.score}</span>
-        `;
+
+        const spanName = document.createElement('span');
+        const strong = document.createElement('strong');
+        strong.textContent = mod.machineName;
+        spanName.appendChild(strong);
+
+        const spanScore = document.createElement('span');
+        spanScore.style.color = mod.gradeColor;
+        spanScore.style.fontWeight = '700';
+        spanScore.textContent = String(mod.score);
+
+        li.appendChild(spanName);
+        li.appendChild(spanScore);
+
         li.addEventListener('click', () => {
           chrome.tabs.create({ url: `https://www.drupal.org/project/${mod.machineName}` });
           window.close();
