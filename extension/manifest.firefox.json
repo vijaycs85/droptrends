@@ -1,0 +1,61 @@
+{
+  "manifest_version": 3,
+  "name": "DropTrends: Drupal Module Health & DropScore",
+  "short_name": "DropTrends",
+  "version": "1.0.0",
+  "description": "Instant DropScore health ratings (0-100), Drupal 11 compatibility checks, and security insights directly on Drupal.org.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    },
+    "default_popup": "src/popup/popup.html",
+    "default_title": "DropTrends (DropScore)"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "droptrends@drupal.org",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
+  "background": {
+    "scripts": [
+      "src/background/service-worker.js"
+    ]
+  },
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "*://*.drupal.org/*",
+    "*://git.drupalcode.org/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://www.drupal.org/project/*",
+        "*://drupal.org/project/*"
+      ],
+      "js": [
+        "src/scoring/dropscore.js",
+        "src/content/extractor.js",
+        "src/content/enricher.js",
+        "src/ui/icons.js",
+        "src/ui/card.js",
+        "src/content/content.js"
+      ],
+      "run_at": "document_end"
+    }
+  ]
+}
