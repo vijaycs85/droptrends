@@ -140,7 +140,7 @@ class DropTrendsUI {
             <!-- Row 1: Brand, Namespace, Project Type Badge & Close Button -->
             <div class="dt-header-top-row">
               <div class="dt-header-breadcrumbs">
-                <span class="dt-brand-tag">DropTrends</span>
+                <span class="dt-brand-tag">${icons.drop({ size: 14 })}<span>DropTrends</span></span>
                 <span class="dt-meta-sep">/</span>
                 <span class="dt-machine-tag">drupal/${this.escapeHTML(rawData.machineName)}</span>
                 ${rawData.projectType ? `<span class="dt-type-badge">${this.escapeHTML(rawData.projectType)}</span>` : ''}
@@ -1113,6 +1113,9 @@ class DropTrendsUI {
         overflow: hidden;
       }
       .dt-brand-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 4.5px;
         font-weight: 700;
         font-size: 11.5px;
         color: #0284c7;
