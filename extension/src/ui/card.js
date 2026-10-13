@@ -153,7 +153,14 @@ class DropTrendsUI {
             <!-- Row 2: Title & Metrics Lockup + Dedicated Score Card -->
             <div class="dt-header-main-row">
               <div class="dt-header-title-block">
-                <h2 class="dt-drawer-title" title="${this.escapeHTML(rawData.title)}">${this.escapeHTML(rawData.title)}</h2>
+                <div class="dt-drawer-title-row">
+                  <h2 class="dt-drawer-title" title="${this.escapeHTML(rawData.title)}">${this.escapeHTML(rawData.title)}</h2>
+                  <a href="https://git.drupalcode.org/project/${encodeURIComponent(rawData.machineName)}" target="_blank" rel="noopener" class="dt-gitlab-link" title="Open repository on DrupalCode GitLab" aria-label="GitLab Repository">
+                    ${icons.gitlab({ size: 14, color: '#e24329' })}
+                    <span>GitLab</span>
+                    ${icons.externalLink({ size: 10, color: '#64748b' })}
+                  </a>
+                </div>
                 <div class="dt-header-meta-row">
                   ${(rawData.activeInstalls && rawData.activeInstalls > 0)
                     ? `<span class="dt-meta-installs">${rawData.activeInstalls.toLocaleString()} active installations</span>`
@@ -445,11 +452,7 @@ class DropTrendsUI {
 
           <!-- Drawer Footer -->
           <div class="dt-drawer-footer">
-            <span>Made with ❤️ by <a href="https://www.drupal.org/u/vijaycs85" target="_blank" rel="noopener" style="color: #0284c7; text-decoration: none; font-weight: 600;">vijaycs85</a></span>
-            <a href="https://git.drupalcode.org/project/${encodeURIComponent(rawData.machineName)}" target="_blank" rel="noopener" class="dt-repo-link">
-              <span>GitLab Repo</span>
-              ${icons.externalLink({ size: 11, color: '#0284c7' })}
-            </a>
+            <span>Made with ❤️ by <a href="https://www.drupal.org/u/vijaycs85" target="_blank" rel="noopener" class="dt-author-link">vijaycs85</a></span>
           </div>
         </div>
       `;
@@ -577,6 +580,11 @@ class DropTrendsUI {
           if (item) {
             const isOpen = item.classList.toggle('dt-open');
             btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            if (isOpen) {
+              setTimeout(() => {
+                item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }, 40);
+            }
           }
         };
       });
@@ -607,6 +615,12 @@ class DropTrendsUI {
               }
             }
           });
+
+          // Scroll to the insights section so the list is focused and immediately visible in viewport
+          const insightsSec = modalOverlay.querySelector('.dt-insights-section');
+          if (insightsSec) {
+            insightsSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
         };
       });
     };
@@ -681,16 +695,16 @@ class DropTrendsUI {
     } else if (pct < 90) {
       color = '#d97706'; // Amber (50 - 89%)
     }
-    const radius = 15;
-    const circ = 2 * Math.PI * radius; // ~94.25
+    const radius = 21;
+    const circ = 2 * Math.PI * radius; // ~131.95
     const offset = circ * (1 - (pct / 100));
 
     return `
       <div class="dt-gauge-item" data-target="${targetId}" role="button" tabindex="0" title="${label}: ${score}/${max} pts (${pct}%) — Click to jump">
         <div class="dt-gauge-dial">
-          <svg class="dt-gauge-svg" width="38" height="38" viewBox="0 0 38 38">
-            <circle class="dt-gauge-bg" cx="19" cy="19" r="${radius}" fill="transparent" stroke="#e2e8f0" stroke-width="3"></circle>
-            <circle class="dt-gauge-arc" cx="19" cy="19" r="${radius}" fill="transparent" stroke="${color}" stroke-width="3" stroke-dasharray="${circ.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}" stroke-linecap="round"></circle>
+          <svg class="dt-gauge-svg" width="50" height="50" viewBox="0 0 50 50">
+            <circle class="dt-gauge-bg" cx="25" cy="25" r="${radius}" fill="transparent" stroke="#e2e8f0" stroke-width="3.8"></circle>
+            <circle class="dt-gauge-arc" cx="25" cy="25" r="${radius}" fill="transparent" stroke="${color}" stroke-width="3.8" stroke-dasharray="${circ.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}" stroke-linecap="round"></circle>
           </svg>
           <span class="dt-gauge-val" style="color: ${color}">${score}</span>
         </div>
@@ -1155,6 +1169,12 @@ class DropTrendsUI {
         flex-direction: column;
         gap: 2px;
       }
+      .dt-drawer-title-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
       .dt-drawer-title {
         margin: 0;
         font-size: 19px;
@@ -1165,6 +1185,27 @@ class DropTrendsUI {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+      .dt-gitlab-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        padding: 1.5px 6px;
+        font-size: 10.5px;
+        font-weight: 600;
+        color: #334155;
+        text-decoration: none;
+        transition: all 0.12s ease;
+        line-height: 1.3;
+        flex-shrink: 0;
+      }
+      .dt-gitlab-link:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+        color: #0f172a;
       }
       .dt-header-meta-row {
         display: flex;
@@ -1437,37 +1478,42 @@ class DropTrendsUI {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 12px;
+        padding: 10px 10px 12px;
         background: #f8fafc;
         border-bottom: 1px solid #e2e8f0;
-        gap: 4px;
+        gap: 2px;
         flex-shrink: 0;
+        flex-wrap: nowrap;
+        width: 100%;
+        box-sizing: border-box;
       }
       .dt-gauge-item {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 3px;
+        gap: 4px;
         cursor: pointer;
-        padding: 4px 6px;
+        padding: 4px 2px;
         border-radius: 6px;
         transition: all 0.15s ease;
         flex: 1;
+        min-width: 0;
         text-align: center;
         user-select: none;
       }
       .dt-gauge-item:hover {
         background: #ffffff;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
         transform: translateY(-1px);
       }
       .dt-gauge-dial {
         position: relative;
-        width: 38px;
-        height: 38px;
+        width: 50px;
+        height: 50px;
         display: flex;
         align-items: center;
         justify-content: center;
+        flex-shrink: 0;
       }
       .dt-gauge-svg {
         position: absolute;
@@ -1482,16 +1528,17 @@ class DropTrendsUI {
         transition: stroke-dashoffset 0.4s ease;
       }
       .dt-gauge-val {
-        font-size: 11px;
+        font-size: 14.5px;
         font-weight: 800;
         line-height: 1;
         z-index: 1;
       }
       .dt-gauge-label {
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 600;
-        color: #475569;
+        color: #334155;
         white-space: nowrap;
+        letter-spacing: -0.01em;
       }
 
       /* Unified Scorecard Box */
@@ -1874,25 +1921,22 @@ class DropTrendsUI {
 
       /* Drawer Footer */
       .dt-drawer-footer {
-        padding: 8px 16px;
+        padding: 6px 16px;
         border-top: 1px solid #e2e8f0;
         background: #f8fafc;
         display: flex;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
-        font-size: 11px;
-        color: #94a3b8;
+        font-size: 10.5px;
+        color: #64748b;
         flex-shrink: 0;
       }
-      .dt-repo-link {
+      .dt-author-link {
         color: #0284c7;
         text-decoration: none;
         font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
       }
-      .dt-repo-link:hover {
+      .dt-author-link:hover {
         text-decoration: underline;
       }
     `;
