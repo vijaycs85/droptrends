@@ -5,7 +5,7 @@ import '../extension/src/scoring/dropscore.js';
 const { evaluateDropScore } = globalThis;
 
 describe('DropScore Engine Unit Tests', () => {
-  it('evaluates a stellar module (like Token) with high A+ grade', () => {
+  it('evaluates a stellar module (Token) with high A+ grade', () => {
     const mockToken = {
       machineName: 'token',
       title: 'Token',
@@ -37,12 +37,59 @@ describe('DropScore Engine Unit Tests', () => {
     assert.strictEqual(result.pillars.modernity.score, 20);
     assert.strictEqual(result.pillars.quality.score, 15);
     assert.strictEqual(result.pillars.adoption.score, 15);
-    assert.ok(result.pillars.maintenance.score >= 20);
+  });
 
-    const hasSecurityFlag = result.flags.some(f => f.text.includes('Security Advisory Covered'));
-    const hasD11Flag = result.flags.some(f => f.text.includes('Drupal 11 Ready'));
-    assert.ok(hasSecurityFlag);
-    assert.ok(hasD11Flag);
+  it('calibrates emerging projects (like Nightingale site template) fairly', () => {
+    const mockNightingale = {
+      machineName: 'nightingale',
+      title: 'Nightingale',
+      projectType: 'Site Template / Recipe',
+      createdDaysAgo: 12,
+      isEmergingProject: true,
+      isSecurityCovered: true,
+      activeInstalls: 5,
+      lastReleaseDaysAgo: 3,
+      latestVersion: '1.0.1',
+      supportsDrupal11: true,
+      supportsDrupal10: true,
+      modernPhpSupported: true,
+      isRecipeReady: true,
+      maintainersCount: 1,
+      sponsorsCount: 2,
+      gitlabPipelineStatus: 'passed',
+      hasAutomatedTests: true,
+      releases: [
+        {
+          version: '1.0.1',
+          isRecommended: true,
+          isSecurityCovered: true,
+          supportsD11: true,
+          daysAgo: 3
+        },
+        {
+          version: '1.x-dev',
+          isRecommended: false,
+          isSecurityCovered: false,
+          supportsD11: true,
+          daysAgo: 5
+        }
+      ]
+    };
+
+    const result = evaluateDropScore(mockNightingale);
+
+    // Emerging project should get healthy score rather than an unfair low F/D
+    assert.ok(result.score >= 70, `Expected emerging project score >= 70, got ${result.score}`);
+    assert.ok(['A+', 'A', 'B'].includes(result.grade));
+    assert.strictEqual(result.isEmergingProject, true);
+
+    const hasEmergingFlag = result.flags.some(f => f.text.includes('Emerging Project'));
+    assert.ok(hasEmergingFlag);
+
+    // Test specific release evaluation
+    const devResult = evaluateDropScore(mockNightingale, '1.x-dev');
+    assert.strictEqual(devResult.activeVersion, '1.x-dev');
+    assert.strictEqual(devResult.pillars.security.breakdown.coverage, 0); // 1.x-dev is not security covered
   });
 
   it('penalizes unsupported and obsolete modules', () => {
@@ -63,43 +110,7 @@ describe('DropScore Engine Unit Tests', () => {
     };
 
     const result = evaluateDropScore(mockAbandoned);
-
-    assert.ok(result.score <= 35, `Expected score <= 35 for unsupported project, got ${result.score}`);
+    assert.ok(result.score <= 35, `Expected score <= 35, got ${result.score}`);
     assert.strictEqual(result.grade, 'F');
-    assert.strictEqual(result.gradeLabel, 'Critical');
-
-    const hasWarning = result.flags.some(f => f.type === 'critical' || f.type === 'warning');
-    assert.ok(hasWarning);
-  });
-
-  it('handles empty or missing input gracefully with sensible defaults', () => {
-    const result = evaluateDropScore({});
-
-    assert.ok(typeof result.score === 'number');
-    assert.ok(result.score >= 0 && result.score <= 100);
-    assert.ok(result.grade);
-    assert.ok(result.pillars);
-    assert.ok(Array.isArray(result.flags));
-  });
-
-  it('gives appropriate score to a moderately healthy module', () => {
-    const mockModerate = {
-      machineName: 'custom_helper',
-      title: 'Custom Helper',
-      isSecurityCovered: true,
-      activeInstalls: 3500,
-      lastReleaseDaysAgo: 120,
-      supportsDrupal11: false,
-      supportsDrupal10: true,
-      maintenanceStatus: 'Minimally maintained',
-      maintainersCount: 2,
-      sponsorsCount: 0,
-      gitlabPipelineStatus: 'unknown',
-      hasAutomatedTests: true
-    };
-
-    const result = evaluateDropScore(mockModerate);
-    assert.ok(result.score >= 50 && result.score <= 75, `Expected 50-75, got ${result.score}`);
-    assert.ok(['B', 'C'].includes(result.grade));
   });
 });

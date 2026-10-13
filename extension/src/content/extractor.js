@@ -1,13 +1,13 @@
 /**
- * DropTrends DOM Extractor
- * Safely parses Drupal.org project pages (drupal.org/project/*) with zero external network calls.
+ * DropTrends DOM Extractor v1.1
+ * Extracts project and version-level signals from Drupal.org project pages.
  */
 
 class DrupalDomExtractor {
   /**
    * Main entry point to extract module metadata from the active page DOM.
    * @param {Document} [doc=document] - DOM document
-   * @returns {Object} Extracted RawModuleData
+   * @returns {Object} Extracted RawModuleData with multi-version details
    */
   static extract(doc = document) {
     const pathname = (typeof window !== 'undefined' && window.location) ? window.location.pathname : '';
@@ -15,31 +15,45 @@ class DrupalDomExtractor {
     const machineName = match ? match[1] : this.extractMachineNameFallback(doc);
 
     const title = this.extractTitle(doc, machineName);
+    const projectType = this.extractProjectType(doc);
+    const projectAge = this.extractProjectAge(doc);
     const isSecurityCovered = this.extractSecurityCoverage(doc);
     const activeInstalls = this.extractActiveInstalls(doc);
-    const releases = this.extractReleaseInfo(doc);
-    const compatibility = this.extractCompatibility(doc, releases);
+    const releases = this.extractAllReleases(doc);
     const maintenance = this.extractMaintenanceStatus(doc);
     const issues = this.extractIssuesCockpit(doc);
     const maintainers = this.extractMaintainers(doc);
     const sponsors = this.extractSupportingOrganizations(doc);
     const gitlab = this.extractGitLabInfo(doc, machineName);
 
+    // Global D11 / D10 page-level scan
+    const pageCompatibility = this.extractPageCompatibility(doc);
+
+    // Choose recommended release as primary
+    const recommendedRelease = releases.find(r => r.isRecommended) || releases[0] || null;
+
     return {
       machineName,
       title,
+      projectType,
+      createdDate: projectAge.createdDate,
+      createdDaysAgo: projectAge.createdDaysAgo,
+      isEmergingProject: (projectAge.createdDaysAgo !== null && projectAge.createdDaysAgo <= 90),
       url: (typeof window !== 'undefined' && window.location) ? window.location.href : `https://www.drupal.org/project/${machineName}`,
       isSecurityCovered,
       activeInstalls,
-      lastReleaseDate: releases.dateString,
-      lastReleaseDaysAgo: releases.daysAgo,
-      latestVersion: releases.version,
-      composerCommand: releases.composerCommand,
-      compatibilityStrings: compatibility.strings,
-      supportsDrupal11: compatibility.supportsD11,
-      supportsDrupal10: compatibility.supportsD10,
-      modernPhpSupported: compatibility.modernPhp,
-      isRecipeReady: compatibility.recipeReady,
+      // Recommended release signals
+      latestVersion: recommendedRelease?.version || null,
+      lastReleaseDate: recommendedRelease?.dateString || null,
+      lastReleaseDaysAgo: recommendedRelease?.daysAgo ?? null,
+      composerCommand: recommendedRelease?.composerCommand || null,
+      supportsDrupal11: recommendedRelease?.supportsD11 || pageCompatibility.supportsD11,
+      supportsDrupal10: recommendedRelease?.supportsD10 || pageCompatibility.supportsD10,
+      modernPhpSupported: recommendedRelease?.modernPhp || pageCompatibility.modernPhp,
+      isRecipeReady: recommendedRelease?.recipeReady || pageCompatibility.recipeReady,
+      compatibilityStrings: recommendedRelease?.compatibilityStrings || pageCompatibility.strings,
+      // Full list of releases for version-level evaluation
+      releases,
       maintenanceStatus: maintenance.maintenanceStatus,
       developmentStatus: maintenance.developmentStatus,
       maintainersCount: maintainers.count,
@@ -72,26 +86,67 @@ class DrupalDomExtractor {
   static extractTitle(doc, fallback) {
     const heading = doc.querySelector('#page-title');
     if (heading) {
-      // Remove img or sub elements text
       const clone = heading.cloneNode(true);
-      const imgs = clone.querySelectorAll('img');
-      imgs.forEach(i => i.remove());
+      // Remove any injected DropTrends elements or images
+      const customElements = clone.querySelectorAll('#droptrends-root, img, .repository-logo');
+      customElements.forEach(i => i.remove());
       const text = clone.textContent.trim();
       if (text) return text;
     }
     return fallback;
   }
 
+  static extractProjectType(doc) {
+    const breadcrumb = doc.querySelector('.breadbox, .breadcrumb');
+    if (breadcrumb) {
+      const text = breadcrumb.textContent.toLowerCase();
+      if (text.includes('general projects') || text.includes('site templates')) return 'Site Template / Recipe';
+      if (text.includes('themes')) return 'Theme';
+      if (text.includes('distributions')) return 'Distribution';
+    }
+    const bodyClass = doc.body ? doc.body.className : '';
+    if (bodyClass.includes('node-type-project-general')) return 'Site Template / Recipe';
+    if (bodyClass.includes('node-type-project-theme')) return 'Theme';
+    return 'Module';
+  }
+
+  static extractProjectAge(doc) {
+    let createdDate = null;
+    let createdDaysAgo = null;
+
+    const createdEl = doc.querySelector('.project-info time[pubdate]:first-of-type, .project-info time:first-of-type');
+    if (createdEl) {
+      const dtAttr = createdEl.getAttribute('datetime');
+      if (dtAttr) {
+        // Unix timestamp in seconds or ISO
+        const num = parseInt(dtAttr, 10);
+        if (!isNaN(num) && num > 1000000000) {
+          const date = new Date(num * 1000);
+          createdDate = date.toISOString();
+          const diffMs = Date.now() - date.getTime();
+          createdDaysAgo = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+        }
+      }
+      if (!createdDate && createdEl.textContent) {
+        const parsed = new Date(createdEl.textContent.trim());
+        if (!isNaN(parsed.getTime())) {
+          createdDate = parsed.toISOString();
+          const diffMs = Date.now() - parsed.getTime();
+          createdDaysAgo = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+        }
+      }
+    }
+
+    return { createdDate, createdDaysAgo };
+  }
+
   static extractSecurityCoverage(doc) {
-    // 1. Check shield icons
     const shieldImgs = doc.querySelectorAll('img[src*="shield-icon"], img[alt*="shield"]');
     if (shieldImgs.length > 0) return true;
 
-    // 2. Check security class in release tables
     const securityCovered = doc.querySelectorAll('.security-covered, .field-security-advisory-coverage');
     if (securityCovered.length > 0) return true;
 
-    // 3. Scan text in project-info
     const projectInfo = doc.querySelector('.project-info');
     if (projectInfo) {
       const text = projectInfo.textContent;
@@ -110,7 +165,6 @@ class DrupalDomExtractor {
         return parseInt(match[1].replace(/,/g, ''), 10) || 0;
       }
     }
-    // Fallback: search anywhere in body for sites report using
     const bodyText = doc.body ? doc.body.textContent : '';
     const match = bodyText.match(/([\d,]+)\s+sites\s+report\s+using\s+this\s+module/i);
     if (match) {
@@ -119,115 +173,124 @@ class DrupalDomExtractor {
     return 0;
   }
 
-  static extractReleaseInfo(doc) {
-    let version = null;
-    let dateString = null;
-    let daysAgo = null;
-    let composerCommand = null;
+  /**
+   * Extracts all releases from the project page download section.
+   */
+  static extractAllReleases(doc) {
+    const releases = [];
+    const releaseElements = doc.querySelectorAll('.view-drupalorg-project-downloads .release');
 
-    // Composer command
-    const composerEl = doc.querySelector('textarea.drupalorg-copy-release, .composer-command');
-    if (composerEl) {
-      composerCommand = composerEl.value || composerEl.textContent.trim();
-    }
+    releaseElements.forEach((el, index) => {
+      const verLink = el.querySelector('.views-field-field-release-version a');
+      const version = verLink ? verLink.textContent.trim() : null;
+      if (!version) return;
 
-    // Recommended release section
-    const releaseRow = doc.querySelector('.view-drupalorg-project-downloads .release.stability-stable, .view-drupalorg-project-downloads .release');
-    if (releaseRow) {
-      const verLink = releaseRow.querySelector('.views-field-field-release-version a');
-      if (verLink) {
-        version = verLink.textContent.trim();
-      }
+      const isRecommended = el.classList.contains('stability-stable') || index === 0;
+      const isSecurityCovered = el.classList.contains('security-covered') || Boolean(el.querySelector('img[src*="shield-icon"]'));
 
-      const createdSpan = releaseRow.querySelector('.views-field-created');
-      if (createdSpan) {
-        dateString = createdSpan.textContent.replace(/released/i, '').trim();
-      }
-    }
+      const createdSpan = el.querySelector('.views-field-created');
+      let dateString = createdSpan ? createdSpan.textContent.replace(/released/i, '').trim() : null;
 
-    // If no date found in release row, check dev release or time tags
-    if (!dateString) {
-      const devText = doc.querySelector('.release-info');
-      if (devText) {
-        const m = devText.textContent.match(/updated\s+([0-9]{1,2}\s+[a-zA-Z]{3}\s+[0-9]{4})/i);
+      // Dev release updated time check
+      if (!dateString) {
+        const m = el.textContent.match(/updated\s+([0-9]{1,2}\s+[a-zA-Z]{3}\s+[0-9]{4})/i);
         if (m) dateString = m[1];
       }
-    }
 
-    if (!dateString) {
-      const updatedTime = doc.querySelector('.project-info time[pubdate]:last-of-type');
-      if (updatedTime) {
-        dateString = updatedTime.textContent.trim();
+      let daysAgo = null;
+      if (dateString) {
+        const parsed = new Date(dateString);
+        if (!isNaN(parsed.getTime())) {
+          daysAgo = Math.max(0, Math.floor((Date.now() - parsed.getTime()) / (1000 * 60 * 60 * 24)));
+        }
       }
-    }
 
-    if (dateString) {
-      const parsedDate = new Date(dateString);
-      if (!isNaN(parsedDate.getTime())) {
-        const now = new Date();
-        const diffMs = now.getTime() - parsedDate.getTime();
-        daysAgo = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+      // Composer Command
+      let composerCommand = null;
+      const composerEl = el.querySelector('textarea.drupalorg-copy-release, .composer-command');
+      if (composerEl) {
+        composerCommand = composerEl.value || composerEl.textContent.trim();
       }
-    }
 
-    return {
-      version,
-      dateString,
-      daysAgo,
-      composerCommand
-    };
+      // Compatibility strings within this release row
+      const rowText = el.textContent;
+      const compatStrings = [];
+      let supportsD11 = false;
+      let supportsD10 = false;
+      let modernPhp = false;
+      let recipeReady = false;
+
+      const worksWithMatch = rowText.match(/Works with Drupal:\s*([^\n\r<]+)/i);
+      if (worksWithMatch) {
+        const str = worksWithMatch[1].trim();
+        compatStrings.push(str);
+        if (/\^11|~11|11\./.test(str)) supportsD11 = true;
+        if (/\^10|~10|10\./.test(str)) supportsD10 = true;
+      }
+
+      // Enhanced Drupal 11 patterns (ddev recipes, D11 tags)
+      if (/\bdrupal11\b|\bdrupal-11\b|\bDrupal 11\b|\^11\b/.test(rowText)) supportsD11 = true;
+      if (/\bdrupal10\b|\bdrupal-10\b|\bDrupal 10\b|\^10\b/.test(rowText)) supportsD10 = true;
+      if (/PHP\s*8\.[2-9]/.test(rowText)) modernPhp = true;
+      if (/recipe|drupal cms/i.test(rowText)) recipeReady = true;
+
+      // Associated GitLab branch for pipeline badge
+      const pipelineEl = el.querySelector('p.pipeline-result');
+      const branch = pipelineEl?.dataset?.version || version.replace(/-dev$/, '');
+
+      releases.push({
+        version,
+        isRecommended,
+        isSecurityCovered,
+        dateString,
+        daysAgo,
+        composerCommand,
+        compatibilityStrings: compatStrings,
+        supportsD11,
+        supportsD10,
+        modernPhp,
+        recipeReady,
+        branch,
+        releaseUrl: verLink?.href || null,
+        el
+      });
+    });
+
+    return releases;
   }
 
-  static extractCompatibility(doc, releases) {
+  static extractPageCompatibility(doc) {
+    const pageText = doc.querySelector('#content') ? doc.querySelector('#content').textContent : (doc.body ? doc.body.textContent : '');
     const strings = [];
+
     let supportsD11 = false;
     let supportsD10 = false;
     let modernPhp = false;
     let recipeReady = false;
 
-    // Scan release table compatibility elements
-    const compatElements = doc.querySelectorAll('.view-drupalorg-project-downloads .views-field, .view-drupalorg-project-downloads div');
-    for (const el of compatElements) {
-      const text = el.textContent.trim();
-      if (text.includes('Works with Drupal:')) {
-        strings.push(text);
-        if (/\^11|~11|11\./.test(text)) supportsD11 = true;
-        if (/\^10|~10|10\./.test(text)) supportsD10 = true;
-      }
-      if (/PHP\s*8\.[2-9]/.test(text)) {
-        modernPhp = true;
-      }
-    }
-
-    // General page text scan
-    const pageText = doc.querySelector('#content') ? doc.querySelector('#content').textContent : (doc.body ? doc.body.textContent : '');
-    if (pageText.includes('Drupal 11') || pageText.includes('^11')) {
+    // Enhanced regex matching for Drupal 11 in site templates, install instructions & recipes
+    if (/\bdrupal11\b|\bdrupal-11\b|\bDrupal 11\b|\^11\b|\bcore: \^11\b/.test(pageText)) {
       supportsD11 = true;
+      strings.push('Drupal 11');
     }
-    if (pageText.includes('Drupal 10') || pageText.includes('^10')) {
+    if (/\bdrupal10\b|\bdrupal-10\b|\bDrupal 10\b|\^10\b|\bcore: \^10\b/.test(pageText)) {
       supportsD10 = true;
+      strings.push('Drupal 10');
     }
     if (/PHP\s*8\.[2-9]|PHP\s*8\.5/.test(pageText)) {
       modernPhp = true;
     }
-    if (pageText.includes('recipe') || pageText.includes('Recipe') || pageText.includes('Drupal CMS')) {
+    if (/recipe|Recipe|Drupal CMS|Site template/i.test(pageText)) {
       recipeReady = true;
     }
 
-    return {
-      strings,
-      supportsD11,
-      supportsD10,
-      modernPhp,
-      recipeReady
-    };
+    return { strings, supportsD11, supportsD10, modernPhp, recipeReady };
   }
 
   static extractMaintenanceStatus(doc) {
     let maintenanceStatus = null;
     let developmentStatus = null;
 
-    // Check project-info list items or sidebar terms
     const elements = doc.querySelectorAll('.project-info li, .region-sidebar-second .block, .taxonomy-terms');
     for (const el of elements) {
       const text = el.textContent;
@@ -242,10 +305,7 @@ class DrupalDomExtractor {
       }
     }
 
-    return {
-      maintenanceStatus,
-      developmentStatus
-    };
+    return { maintenanceStatus, developmentStatus };
   }
 
   static extractIssuesCockpit(doc) {
@@ -329,7 +389,7 @@ class DrupalDomExtractor {
     if (!defaultBranch) {
       const devRelease = doc.querySelector('.release-info p a[href*="-dev"]');
       if (devRelease) {
-        const text = devRelease.textContent.trim(); // e.g. "8.x-1.x-dev"
+        const text = devRelease.textContent.trim();
         defaultBranch = text.replace(/-dev$/, '');
       }
     }

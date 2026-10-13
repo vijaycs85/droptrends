@@ -5,8 +5,7 @@ import '../extension/src/content/extractor.js';
 const { DrupalDomExtractor } = globalThis;
 
 describe('DOM Extractor Unit Tests', () => {
-  it('extracts security coverage, active installs, and release info from mock DOM', () => {
-    // Create a mock DOM document representing Drupal.org Token project page
+  it('extracts security coverage, active installs, releases, and age from mock DOM', () => {
     const mockDoc = {
       querySelector(selector) {
         if (selector === '#page-title') {
@@ -14,57 +13,31 @@ describe('DOM Extractor Unit Tests', () => {
             cloneNode() {
               return {
                 querySelectorAll() { return []; },
-                textContent: 'Token'
+                textContent: 'Nightingale'
               };
             }
           };
         }
+        if (selector === '.breadbox, .breadcrumb') {
+          return { textContent: 'General projects > Site Templates' };
+        }
+        if (selector.includes('time[pubdate]')) {
+          return {
+            getAttribute(attr) {
+              if (attr === 'datetime') return String(Math.floor(Date.now() / 1000) - 86400 * 10); // 10 days ago
+              return null;
+            },
+            textContent: '1 October 2026'
+          };
+        }
         if (selector === '.project-info') {
           return {
-            textContent: '520,202 sites report using this module. Stable releases for this project are covered by the security advisory policy.'
-          };
-        }
-        if (selector === 'textarea.drupalorg-copy-release, .composer-command') {
-          return {
-            value: "composer require 'drupal/token:^1.17'"
-          };
-        }
-        if (selector === '.view-drupalorg-project-downloads .release.stability-stable, .view-drupalorg-project-downloads .release') {
-          return {
-            querySelector(sel) {
-              if (sel === '.views-field-field-release-version a') {
-                return { textContent: '8.x-1.17' };
-              }
-              if (sel === '.views-field-created') {
-                return { textContent: 'released 9 January 2026' };
-              }
-              return null;
-            }
-          };
-        }
-        if (selector === '#block-project-issue-issue-cockpit') {
-          return {
-            querySelector(sel) {
-              if (sel === '.issue-cockpit-All .issue-cockpit-totals') {
-                return { textContent: '461 open, 11 RTBC, 1,896 total' };
-              }
-              if (sel === '.issue-cockpit-1 .issue-cockpit-totals') {
-                return { textContent: '185 open, 4 RTBC, 765 total' };
-              }
-              return null;
-            }
-          };
-        }
-        if (selector === '#block-drupalorg-project-maintainers') {
-          return {
-            querySelectorAll() {
-              return [{ textContent: 'dave reid' }, { textContent: 'eaton' }, { textContent: 'berdir' }];
-            }
+            textContent: 'Stable releases for this project are covered by the security advisory policy.'
           };
         }
         if (selector === '#content') {
           return {
-            textContent: 'Works with Drupal: ^10.3 || ^11. PHP 8.5 compatibility.'
+            textContent: 'ddev config --project-type=drupal11. Nightingale is a Drupal CMS site template.'
           };
         }
         return null;
@@ -73,13 +46,32 @@ describe('DOM Extractor Unit Tests', () => {
         if (selector.includes('shield-icon') || selector.includes('shield')) {
           return [{ src: '/shield-icon-black.svg' }];
         }
-        if (selector.includes('views-field')) {
-          return [{ textContent: 'Works with Drupal: ^10.3 || ^11' }];
+        if (selector.includes('.view-drupalorg-project-downloads .release')) {
+          return [
+            {
+              classList: { contains(c) { return c === 'stability-stable' || c === 'security-covered'; } },
+              querySelector(sel) {
+                if (sel.includes('release-version a')) return { textContent: '1.0.1', href: '/project/nightingale/releases/1.0.1' };
+                if (sel.includes('created')) return { textContent: 'released 10 October 2026' };
+                if (sel.includes('composer-command')) return { value: 'composer require drupal/nightingale:^1.0' };
+                return null;
+              },
+              textContent: '1.0.1 released 10 October 2026. Works with Drupal: ^11'
+            },
+            {
+              classList: { contains() { return false; } },
+              querySelector(sel) {
+                if (sel.includes('release-version a')) return { textContent: '1.x-dev', href: '/project/nightingale/releases/1.x-dev' };
+                return null;
+              },
+              textContent: '1.x-dev updated 8 Oct 2026'
+            }
+          ];
         }
         if (selector.includes('supporting-organizations')) {
           return [
-            { querySelector() { return { textContent: 'Lullabot' }; } },
-            { querySelector() { return { textContent: 'MD Systems' }; } }
+            { querySelector() { return { textContent: 'Reading Room' }; } },
+            { querySelector() { return { textContent: 'Solathat' }; } }
           ];
         }
         return [];
@@ -88,18 +80,14 @@ describe('DOM Extractor Unit Tests', () => {
 
     const data = DrupalDomExtractor.extract(mockDoc);
 
-    assert.strictEqual(data.title, 'Token');
+    assert.strictEqual(data.title, 'Nightingale');
     assert.strictEqual(data.isSecurityCovered, true);
-    assert.strictEqual(data.activeInstalls, 520202);
-    assert.strictEqual(data.latestVersion, '8.x-1.17');
+    assert.strictEqual(data.isEmergingProject, true);
     assert.strictEqual(data.supportsDrupal11, true);
-    assert.strictEqual(data.supportsDrupal10, true);
-    assert.strictEqual(data.modernPhpSupported, true);
-    assert.strictEqual(data.openIssuesCount, 461);
-    assert.strictEqual(data.rtbcCount, 11);
-    assert.strictEqual(data.totalIssuesCount, 1896);
-    assert.strictEqual(data.openBugsCount, 185);
-    assert.strictEqual(data.maintainersCount, 3);
-    assert.strictEqual(data.sponsorsCount, 2);
+    assert.strictEqual(data.latestVersion, '1.0.1');
+    assert.strictEqual(data.releases.length, 2);
+    assert.strictEqual(data.releases[0].version, '1.0.1');
+    assert.strictEqual(data.releases[0].isSecurityCovered, true);
+    assert.strictEqual(data.releases[1].version, '1.x-dev');
   });
 });
