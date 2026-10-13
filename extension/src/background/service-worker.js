@@ -30,7 +30,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           });
           await chrome.action.setTitle({
             tabId: sender.tab.id,
-            title: `DropScore: ${message.score} (${message.grade}) - ${message.moduleName}`
+            title: `DropScore: ${message.score} (${message.gradeLabel}) - ${message.moduleName}`
           });
         }
         sendResponse({ success: true });

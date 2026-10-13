@@ -1,5 +1,5 @@
 /**
- * DropTrends Popup Controller v1.2
+ * DropTrends Popup Controller v1.3
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const machineEl = document.getElementById('dt-module-machine');
   const scorePill = document.getElementById('dt-score-pill');
   const scoreVal = document.getElementById('dt-score-val');
-  const scoreGrade = document.getElementById('dt-score-grade');
+  const scoreLabel = document.getElementById('dt-score-label');
   const secTag = document.getElementById('dt-sec-tag');
   const d11Tag = document.getElementById('dt-d11-tag');
 
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       machineEl.textContent = `drupal/${rawData.machineName}`;
 
       scoreVal.textContent = evaluation.score;
-      scoreGrade.textContent = evaluation.grade;
+      if (scoreLabel) scoreLabel.textContent = evaluation.gradeLabel;
       scorePill.style.backgroundColor = evaluation.gradeColor;
 
       secTag.textContent = rawData.isSecurityCovered ? 'Security Covered' : 'No Shield';
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         li.className = 'dt-recent-item';
         li.innerHTML = `
           <span><strong>${mod.machineName}</strong></span>
-          <span style="color: ${mod.gradeColor}; font-weight: 700;">${mod.score} ${mod.grade}</span>
+          <span style="color: ${mod.gradeColor}; font-weight: 700;">${mod.score}</span>
         `;
         li.addEventListener('click', () => {
           chrome.tabs.create({ url: `https://www.drupal.org/project/${mod.machineName}` });

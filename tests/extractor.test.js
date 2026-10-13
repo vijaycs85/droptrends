@@ -100,4 +100,31 @@ describe('DOM Extractor Unit Tests', () => {
     assert.strictEqual(DrupalDomExtractor.isExcludedProject('pathauto'), false);
     assert.strictEqual(DrupalDomExtractor.isExcludedProject('nightingale'), false);
   });
+
+  it('generates accurate Composer commands across semver, pre-releases, and legacy branches', () => {
+    // Stable release with semver
+    assert.strictEqual(
+      DrupalDomExtractor.generateComposerCommand('flowdrop', '2.6.0', true),
+      "composer require 'drupal/flowdrop:^2.6'"
+    );
+
+    // Pre-release
+    assert.strictEqual(
+      DrupalDomExtractor.generateComposerCommand('flowdrop', '2.7.0-alpha2', false),
+      "composer require 'drupal/flowdrop:2.7.0-alpha2'"
+    );
+
+    // Legacy branch format (Token)
+    assert.strictEqual(
+      DrupalDomExtractor.generateComposerCommand('token', '8.x-1.14', true),
+      "composer require 'drupal/token:^1'"
+    );
+
+    // Fallback when no version specified
+    assert.strictEqual(
+      DrupalDomExtractor.generateComposerCommand('token', null),
+      'composer require drupal/token'
+    );
+  });
 });
+

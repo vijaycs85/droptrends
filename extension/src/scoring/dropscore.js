@@ -1,6 +1,8 @@
 /**
- * DropScore™ Evaluation Engine v1.1
- * Evaluates Drupal module signals across 5 weighted pillars with emerging project calibration and release-level scoring.
+ * DropScore™ Evaluation Engine v1.3
+ * Evaluates Drupal module signals across 5 weighted pillars.
+ * Focuses on a clean 0-100 numerical score with objective sentiment labels (no A/B/C/D letter grades)
+ * and properly prioritizes stable releases over pre-release alphas/betas.
  */
 
 class DropScoreEngine {
@@ -17,6 +19,7 @@ class DropScoreEngine {
       : (data.releases?.find(r => r.isRecommended) || data.releases?.[0] || null);
 
     // Merge version-specific overrides if evaluating a specific release
+    // If evaluating the project generally (targetVersion is null), prefer stable release signals
     const effectiveData = {
       ...data,
       isSecurityCovered: (activeRelease?.isSecurityCovered !== undefined) ? activeRelease.isSecurityCovered : data.isSecurityCovered,
@@ -52,7 +55,7 @@ class DropScoreEngine {
     } else if (maintStatus.includes('unsupported') || devStatus.includes('obsolete') || devStatus.includes('no further')) {
       statusPoints = 0;
     } else if (effectiveData.isEmergingProject) {
-      statusPoints = 9; // Newly created projects under active initial development
+      statusPoints = 9;
     }
 
     let recencyPoints = 0;
@@ -85,7 +88,7 @@ class DropScoreEngine {
       else if (bugRatio <= 0.75) bugRatioPoints = 2;
       else bugRatioPoints = 1;
     } else if (effectiveData.isEmergingProject) {
-      bugRatioPoints = 4; // Clean slate for new projects
+      bugRatioPoints = 4;
     }
     issuePoints = Math.min(7, rtbcPoints + bugRatioPoints);
 
@@ -139,7 +142,6 @@ class DropScoreEngine {
     else if (installs >= 1000) installPoints = 4;
     else if (installs >= 200) installPoints = 2;
     else {
-      // Emerging Project Grace: If project is brand new (< 90 days), grant emerging adoption baseline
       installPoints = effectiveData.isEmergingProject ? 5 : 1;
     }
 
@@ -157,10 +159,10 @@ class DropScoreEngine {
     };
     let adoptionScore = Math.max(0, Math.min(15, installPoints + contribPoints));
 
-    // Calculate Raw Total
+    // Total Score
     let rawScore = securityScore + maintenanceScore + modernityScore + qualityScore + adoptionScore;
 
-    // Apply Penalties for unsupported
+    // Penalty for explicitly unsupported or obsolete projects
     let isUnsupported = maintStatus.includes('unsupported') || devStatus.includes('obsolete');
     if (isUnsupported) {
       rawScore = Math.min(rawScore, 35);
@@ -168,122 +170,111 @@ class DropScoreEngine {
 
     const totalScore = Math.max(0, Math.min(100, Math.round(rawScore)));
 
-    // Approved Design Tokens & Semantic Scale
-    let grade = 'F';
-    let gradeLabel = 'Critical';
+    // Modern Benchmarking Labels (No academic school letter grades A/B/C/D)
+    let gradeLabel = 'Needs Attention';
     let gradeColor = '#dc2626'; // Crimson
 
     if (totalScore >= 90) {
-      grade = 'A+';
       gradeLabel = 'Exceptional';
       gradeColor = '#059669'; // Emerald
     } else if (totalScore >= 75) {
-      grade = 'A';
       gradeLabel = 'Healthy';
       gradeColor = '#0891b2'; // Teal / Cyan
     } else if (totalScore >= 60) {
-      grade = 'B';
       gradeLabel = 'Stable';
       gradeColor = '#2563eb'; // Royal Blue
     } else if (totalScore >= 45) {
-      grade = 'C';
       gradeLabel = effectiveData.isEmergingProject ? 'Emerging' : 'Maturing';
       gradeColor = '#d97706'; // Amber / Bronze
     }
 
-    // Flags & Insights
+    // Flags & Signals
     const flags = [];
 
-    // Emerging project flag
     if (effectiveData.isEmergingProject) {
       flags.push({
         type: 'positive',
-        icon: '🌱',
+        icon: 'sprout',
         text: 'Emerging Project',
-        description: `Created within the last ${effectiveData.createdDaysAgo || 90} days. Actively launching into the ecosystem.`
+        description: `Created within the last ${effectiveData.createdDaysAgo || 90} days. High release momentum.`
       });
     }
 
-    // Security flags
     if (effectiveData.isSecurityCovered) {
       flags.push({
         type: 'positive',
-        icon: '🛡️',
-        text: 'Security Advisory Covered',
-        description: 'Releases are protected and audited under the Drupal Security Advisory policy.'
+        icon: 'shieldCheck',
+        text: 'Security Covered',
+        description: 'Releases are audited under the Drupal Security Advisory policy.'
       });
     } else {
       flags.push({
         type: 'warning',
-        icon: '⚠️',
+        icon: 'shieldAlert',
         text: 'No Advisory Coverage',
         description: 'Releases are NOT covered by Drupal Security Advisories. Audit manually.'
       });
     }
 
-    // Modernity flags
     if (effectiveData.supportsDrupal11) {
       flags.push({
         type: 'positive',
-        icon: '🚀',
+        icon: 'rocket',
         text: 'Drupal 11 Ready',
-        description: 'Confirmed compatibility with Drupal 11 core.'
+        description: 'Compatible with Drupal 11 core.'
       });
     } else if (effectiveData.supportsDrupal10) {
       flags.push({
         type: 'warning',
-        icon: '⏳',
+        icon: 'clock',
         text: 'Drupal 10 Only',
-        description: 'Compatible with Drupal 10, but Drupal 11 support is not yet declared.'
+        description: 'Compatible with Drupal 10; Drupal 11 not yet tagged.'
       });
     } else {
       flags.push({
         type: 'critical',
-        icon: '🚫',
+        icon: 'alertCircle',
         text: 'Legacy Only',
         description: 'No modern Drupal 10 or 11 compatibility found.'
       });
     }
 
-    // Maintenance flags
     if (daysAgo !== null && daysAgo <= 45) {
       flags.push({
         type: 'positive',
-        icon: '⚡',
+        icon: 'zap',
         text: 'Recently Released',
         description: `Latest release published ${daysAgo} days ago.`
       });
     } else if (daysAgo !== null && daysAgo > 365) {
       flags.push({
         type: 'warning',
-        icon: '💤',
+        icon: 'moon',
         text: 'Stale Releases (>1 Year)',
         description: `No new releases in over ${Math.floor(daysAgo / 30)} months.`
       });
     }
 
-    // Adoption flags
     if (installs >= 20000) {
       flags.push({
         type: 'positive',
-        icon: '📈',
+        icon: 'users',
         text: `${installs.toLocaleString()} Active Sites`,
-        description: 'Widely adopted and battle-tested across thousands of Drupal sites.'
+        description: 'Battle-tested across thousands of Drupal installations.'
       });
     }
 
-    // CI flags
     if (pipelineStatus === 'passed' || pipelineStatus === 'success') {
       flags.push({
         type: 'positive',
-        icon: '🧪',
+        icon: 'flask',
         text: 'GitLab CI Green',
         description: 'Automated test pipeline passing on git.drupalcode.org.'
       });
     } else if (pipelineStatus === 'failed') {
       flags.push({
         type: 'critical',
-        icon: '❌',
+        icon: 'alertCircle',
         text: 'GitLab CI Failing',
         description: 'Automated pipeline currently has failing tests.'
       });
@@ -292,9 +283,9 @@ class DropScoreEngine {
     if (isUnsupported) {
       flags.push({
         type: 'critical',
-        icon: '🚫',
+        icon: 'alertCircle',
         text: 'Unsupported / Obsolete',
-        description: 'Maintainers have marked this project as unsupported or obsolete.'
+        description: 'Maintainers marked this project as unsupported or obsolete.'
       });
     }
 
@@ -314,7 +305,6 @@ class DropScoreEngine {
 
     return {
       score: totalScore,
-      grade,
       gradeLabel,
       gradeColor,
       activeVersion: effectiveData.activeVersion,

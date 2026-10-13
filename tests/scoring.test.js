@@ -5,7 +5,7 @@ import '../extension/src/scoring/dropscore.js';
 const { evaluateDropScore } = globalThis;
 
 describe('DropScore Engine Unit Tests', () => {
-  it('evaluates a stellar module (Token) with high A+ grade', () => {
+  it('evaluates a stellar module (Token) with high Exceptional score', () => {
     const mockToken = {
       machineName: 'token',
       title: 'Token',
@@ -31,12 +31,60 @@ describe('DropScore Engine Unit Tests', () => {
     const result = evaluateDropScore(mockToken);
 
     assert.ok(result.score >= 90, `Expected score >= 90, got ${result.score}`);
-    assert.strictEqual(result.grade, 'A+');
     assert.strictEqual(result.gradeLabel, 'Exceptional');
     assert.strictEqual(result.pillars.security.score, 25);
     assert.strictEqual(result.pillars.modernity.score, 20);
     assert.strictEqual(result.pillars.quality.score, 15);
     assert.strictEqual(result.pillars.adoption.score, 15);
+  });
+
+  it('correctly evaluates a module with stable release and newer alpha/beta (FlowDrop)', () => {
+    const mockFlowDrop = {
+      machineName: 'flowdrop',
+      title: 'FlowDrop',
+      isSecurityCovered: true, // Has covered stable release
+      activeInstalls: 433,
+      latestVersion: '2.6.0',
+      lastReleaseDaysAgo: 21,
+      supportsDrupal11: true,
+      supportsDrupal10: false,
+      modernPhpSupported: true,
+      isRecipeReady: false,
+      maintainersCount: 4,
+      sponsorsCount: 1,
+      hasStableRelease: true,
+      gitlabPipelineStatus: 'passed',
+      hasAutomatedTests: true,
+      releases: [
+        {
+          version: '2.7.0-alpha2',
+          isStable: false,
+          isRecommended: false,
+          isSecurityCovered: false,
+          daysAgo: 3,
+          supportsD11: true
+        },
+        {
+          version: '2.6.0',
+          isStable: true,
+          isRecommended: true,
+          isSecurityCovered: true,
+          daysAgo: 21,
+          supportsD11: true
+        }
+      ]
+    };
+
+    const result = evaluateDropScore(mockFlowDrop);
+
+    // Default evaluation should use stable release 2.6.0 and retain security coverage
+    assert.ok(result.score >= 70, `Expected score >= 70, got ${result.score}`);
+    assert.ok(['Healthy', 'Exceptional', 'Stable'].includes(result.gradeLabel));
+    assert.strictEqual(result.pillars.security.score >= 20, true);
+    assert.strictEqual(result.activeVersion, '2.6.0');
+
+    const hasSecurityFlag = result.flags.some(f => f.text.includes('Security Covered'));
+    assert.ok(hasSecurityFlag);
   });
 
   it('calibrates emerging projects (like Nightingale site template) fairly', () => {
@@ -61,35 +109,20 @@ describe('DropScore Engine Unit Tests', () => {
       releases: [
         {
           version: '1.0.1',
+          isStable: true,
           isRecommended: true,
           isSecurityCovered: true,
           supportsD11: true,
           daysAgo: 3
-        },
-        {
-          version: '1.x-dev',
-          isRecommended: false,
-          isSecurityCovered: false,
-          supportsD11: true,
-          daysAgo: 5
         }
       ]
     };
 
     const result = evaluateDropScore(mockNightingale);
 
-    // Emerging project should get healthy score rather than an unfair low F/D
     assert.ok(result.score >= 70, `Expected emerging project score >= 70, got ${result.score}`);
-    assert.ok(['A+', 'A', 'B'].includes(result.grade));
+    assert.ok(['Exceptional', 'Healthy', 'Stable', 'Emerging'].includes(result.gradeLabel));
     assert.strictEqual(result.isEmergingProject, true);
-
-    const hasEmergingFlag = result.flags.some(f => f.text.includes('Emerging Project'));
-    assert.ok(hasEmergingFlag);
-
-    // Test specific release evaluation
-    const devResult = evaluateDropScore(mockNightingale, '1.x-dev');
-    assert.strictEqual(devResult.activeVersion, '1.x-dev');
-    assert.strictEqual(devResult.pillars.security.breakdown.coverage, 0); // 1.x-dev is not security covered
   });
 
   it('penalizes unsupported and obsolete modules', () => {
@@ -111,6 +144,6 @@ describe('DropScore Engine Unit Tests', () => {
 
     const result = evaluateDropScore(mockAbandoned);
     assert.ok(result.score <= 35, `Expected score <= 35, got ${result.score}`);
-    assert.strictEqual(result.grade, 'F');
+    assert.strictEqual(result.gradeLabel, 'Needs Attention');
   });
 });

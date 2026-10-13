@@ -1,6 +1,7 @@
 /**
- * DropTrends DOM Extractor v1.2
- * Extracts project and version-level signals from Drupal.org project pages with core platform exclusion.
+ * DropTrends DOM Extractor v1.3
+ * Extracts project and version-level signals from Drupal.org project pages with core platform exclusion
+ * and robust stable-first release prioritization (alpha/beta/rc pre-releases do not override stable).
  */
 
 class DrupalDomExtractor {
@@ -31,9 +32,15 @@ class DrupalDomExtractor {
     const title = this.extractTitle(doc, machineName);
     const projectType = this.extractProjectType(doc);
     const projectAge = this.extractProjectAge(doc);
-    const isSecurityCovered = this.extractSecurityCoverage(doc);
+    const releases = this.extractAllReleases(doc, machineName);
+
+    // Prioritize the latest STABLE release as recommended
+    const latestStableRelease = releases.find(r => r.isStable);
+    const recommendedRelease = latestStableRelease || releases[0] || null;
+
+    // Security coverage: if project has a covered stable release or general shield icon
+    const isSecurityCovered = this.extractSecurityCoverage(doc, latestStableRelease);
     const activeInstalls = this.extractActiveInstalls(doc);
-    const releases = this.extractAllReleases(doc);
     const maintenance = this.extractMaintenanceStatus(doc);
     const issues = this.extractIssuesCockpit(doc);
     const maintainers = this.extractMaintainers(doc);
@@ -41,7 +48,6 @@ class DrupalDomExtractor {
     const gitlab = this.extractGitLabInfo(doc, machineName);
 
     const pageCompatibility = this.extractPageCompatibility(doc);
-    const recommendedRelease = releases.find(r => r.isRecommended) || releases[0] || null;
 
     return {
       isExcluded: false,
@@ -54,10 +60,11 @@ class DrupalDomExtractor {
       url: (typeof window !== 'undefined' && window.location) ? window.location.href : `https://www.drupal.org/project/${machineName}`,
       isSecurityCovered,
       activeInstalls,
+      hasStableRelease: Boolean(latestStableRelease),
       latestVersion: recommendedRelease?.version || null,
       lastReleaseDate: recommendedRelease?.dateString || null,
       lastReleaseDaysAgo: recommendedRelease?.daysAgo ?? null,
-      composerCommand: recommendedRelease?.composerCommand || null,
+      composerCommand: recommendedRelease?.composerCommand || DrupalDomExtractor.generateComposerCommand(machineName, recommendedRelease?.version, recommendedRelease?.isStable),
       supportsDrupal11: recommendedRelease?.supportsD11 || pageCompatibility.supportsD11,
       supportsDrupal10: recommendedRelease?.supportsD10 || pageCompatibility.supportsD10,
       modernPhpSupported: recommendedRelease?.modernPhp || pageCompatibility.modernPhp,
@@ -148,7 +155,10 @@ class DrupalDomExtractor {
     return { createdDate, createdDaysAgo };
   }
 
-  static extractSecurityCoverage(doc) {
+  static extractSecurityCoverage(doc, latestStableRelease = null) {
+    // If the latest stable release is covered, project has security advisory coverage
+    if (latestStableRelease?.isSecurityCovered) return true;
+
     const shieldImgs = doc.querySelectorAll('img[src*="shield-icon"], img[alt*="shield"]');
     if (shieldImgs.length > 0) return true;
 
@@ -181,16 +191,19 @@ class DrupalDomExtractor {
     return 0;
   }
 
-  static extractAllReleases(doc) {
+  static extractAllReleases(doc, machineName = null) {
     const releases = [];
     const releaseElements = doc.querySelectorAll('.view-drupalorg-project-downloads .release');
 
-    releaseElements.forEach((el, index) => {
+    releaseElements.forEach((el) => {
       const verLink = el.querySelector('.views-field-field-release-version a');
       const version = verLink ? verLink.textContent.trim() : null;
       if (!version) return;
 
-      const isRecommended = el.classList.contains('stability-stable') || index === 0;
+      const isExplicitStableClass = el.classList.contains('stability-stable');
+      const isPreRelease = /-(alpha|beta|rc|dev)/i.test(version);
+      const isStable = isExplicitStableClass || !isPreRelease;
+
       const isSecurityCovered = el.classList.contains('security-covered') || Boolean(el.querySelector('img[src*="shield-icon"]'));
 
       const createdSpan = el.querySelector('.views-field-created');
@@ -213,6 +226,9 @@ class DrupalDomExtractor {
       const composerEl = el.querySelector('textarea.drupalorg-copy-release, .composer-command');
       if (composerEl) {
         composerCommand = composerEl.value || composerEl.textContent.trim();
+      }
+      if (!composerCommand && machineName && version) {
+        composerCommand = DrupalDomExtractor.generateComposerCommand(machineName, version, isStable);
       }
 
       const rowText = el.textContent;
@@ -240,7 +256,8 @@ class DrupalDomExtractor {
 
       releases.push({
         version,
-        isRecommended,
+        isStable,
+        isRecommended: false, // will be marked after all releases parsed
         isSecurityCovered,
         dateString,
         daysAgo,
@@ -256,7 +273,49 @@ class DrupalDomExtractor {
       });
     });
 
+    // Mark recommended: First stable release, or first release if no stable exists
+    const firstStable = releases.find(r => r.isStable);
+    if (firstStable) {
+      firstStable.isRecommended = true;
+    } else if (releases.length > 0) {
+      releases[0].isRecommended = true;
+    }
+
     return releases;
+  }
+
+  /**
+   * Generates a canonical Composer command for a Drupal module release.
+   */
+  static generateComposerCommand(machineName, version, isStable = true) {
+    if (!machineName) return '';
+    if (!version) return `composer require drupal/${machineName}`;
+
+    const cleanVer = version.trim();
+    // Semantic versioning match: 2.6.0, 1.0.4, 2.7.0-alpha2, etc.
+    const semver = cleanVer.match(/^(\d+)\.(\d+)(?:\.\d+)?(.*)$/);
+    if (semver) {
+      const major = semver[1];
+      const minor = semver[2];
+      const extra = semver[3]; // e.g. -alpha2, -beta1, -rc1, -dev
+      if (!extra && isStable) {
+        return `composer require 'drupal/${machineName}:^${major}.${minor}'`;
+      }
+      return `composer require 'drupal/${machineName}:${cleanVer}'`;
+    }
+
+    // Legacy Drupal format: 8.x-1.2, 7.x-2.0
+    const legacy = cleanVer.match(/^\d+\.x-(\d+)(?:\.(\d+))?(.*)$/);
+    if (legacy) {
+      const major = legacy[1];
+      const extra = legacy[3];
+      if (!extra && isStable) {
+        return `composer require 'drupal/${machineName}:^${major}'`;
+      }
+      return `composer require 'drupal/${machineName}:${cleanVer}'`;
+    }
+
+    return `composer require 'drupal/${machineName}:${cleanVer}'`;
   }
 
   static extractPageCompatibility(doc) {

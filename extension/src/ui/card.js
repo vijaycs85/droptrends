@@ -1,6 +1,7 @@
 /**
- * DropTrends Shadow DOM UI Overlay v1.3
- * Linear-grade, ultra-compact design. Eliminates vertical whitespace; fits all 5 pillars and signals at-a-glance.
+ * DropTrends Shadow DOM UI Overlay v1.4
+ * Modern Linear-grade compact design with objective sentiment ratings (no academic letter grades)
+ * and intelligent stable vs pre-release tags.
  */
 
 class DropTrendsUI {
@@ -31,7 +32,7 @@ class DropTrendsUI {
 
     const icons = globalThis.DropIcons || {};
 
-    // Header Health Pill (28px height, micro-segmented, baseline aligned)
+    // Header Health Pill (28px height, numerical score only, no letter grades)
     const pill = document.createElement('div');
     pill.className = 'dt-pill';
     pill.setAttribute('role', 'button');
@@ -55,7 +56,6 @@ class DropTrendsUI {
           <span class="dt-brand-title">DropScore</span>
           <div class="dt-score-badge" style="background-color: ${evalData.gradeColor}">
             <span>${evalData.score}</span>
-            <span class="dt-score-grade">${evalData.grade}</span>
           </div>
         </div>
 
@@ -82,17 +82,20 @@ class DropTrendsUI {
 
     pill.innerHTML = renderPillContent(currentEvaluation);
 
-    // Modal Drawer (Ultra-compact, Linear-grade)
+    // Modal Drawer (Linear-grade, ultra-compact)
     const modalOverlay = document.createElement('div');
     modalOverlay.className = 'dt-modal-overlay';
 
     const renderDrawerContent = (evalData, selectedVer) => {
       const activeRel = rawData.releases?.find(r => r.version === selectedVer) || rawData.releases?.[0] || null;
-      const composerCmd = activeRel?.composerCommand || rawData.composerCommand;
+      const composerCmd = activeRel?.composerCommand 
+        || (typeof DrupalDomExtractor !== 'undefined' ? DrupalDomExtractor.generateComposerCommand(rawData.machineName, activeRel?.version, activeRel?.isStable) : null)
+        || rawData.composerCommand
+        || `composer require drupal/${rawData.machineName}`;
 
       return `
         <div class="dt-drawer" role="dialog" aria-modal="true" aria-label="DropScore Breakdown">
-          <!-- Top Header Strip: Brand + Score Lockup + Close -->
+          <!-- Top Header Strip -->
           <div class="dt-drawer-header">
             <div class="dt-drawer-identity">
               <div class="dt-identity-top">
@@ -110,14 +113,14 @@ class DropTrendsUI {
             </div>
 
             <div class="dt-drawer-header-right">
-              <!-- Score Lockup Pill -->
+              <!-- Score Lockup Pill (Numerical score + sentiment label) -->
               <div class="dt-score-pill-card" style="border-color: ${evalData.gradeColor}">
                 <div class="dt-score-digits">
                   <span class="dt-score-big" style="color: ${evalData.gradeColor}">${evalData.score}</span>
                   <span class="dt-score-denom">/100</span>
                 </div>
                 <div class="dt-grade-chip" style="background-color: ${evalData.gradeColor}">
-                  ${evalData.grade} • ${evalData.gradeLabel}
+                  ${evalData.gradeLabel}
                 </div>
               </div>
               <button class="dt-close-btn" aria-label="Close dialog">
@@ -126,36 +129,39 @@ class DropTrendsUI {
             </div>
           </div>
 
-          <!-- Action & Release Strip -->
+          <!-- Action & Release Strip (Two-tier: Release Switcher + Full-Width Composer Bar) -->
           <div class="dt-action-strip">
             <!-- Release Selector -->
             ${(rawData.releases && rawData.releases.length > 0) ? `
-              <div class="dt-release-segmented">
+              <div class="dt-release-row">
                 <span class="dt-release-lead">Release:</span>
                 <div class="dt-release-buttons">
                   ${rawData.releases.slice(0, 4).map(r => `
-                    <button class="dt-rel-btn ${r.version === selectedVer ? 'dt-rel-active' : ''}" data-version="${this.escapeHTML(r.version)}">
-                      ${this.escapeHTML(r.version)}
-                      ${r.isRecommended ? '<span class="dt-rel-tag">Stable</span>' : ''}
+                    <button class="dt-rel-btn ${r.version === selectedVer ? 'dt-rel-active' : ''}" data-version="${this.escapeHTML(r.version)}" title="${this.escapeHTML(r.version)} (${r.isStable ? 'Stable release' : 'Pre-release'})">
+                      <span class="dt-rel-vname">${this.escapeHTML(r.version)}</span>
+                      <span class="dt-rel-tag ${r.isStable ? 'dt-tag-stable' : 'dt-tag-pre'}">${r.isStable ? 'Stable' : 'Pre'}</span>
                     </button>
                   `).join('')}
                 </div>
               </div>
-            ` : '<div></div>'}
+            ` : ''}
 
-            <!-- Compact One-Click Composer Button -->
+            <!-- Dedicated Full-Width Composer Command Bar -->
             ${composerCmd ? `
-              <div class="dt-composer-bar">
-                <code title="${this.escapeHTML(composerCmd)}">${this.escapeHTML(composerCmd)}</code>
-                <button class="dt-copy-btn" title="Copy composer command">
-                  ${icons.copy({ size: 11, color: '#ffffff' })}
-                  <span>Copy</span>
+              <div class="dt-composer-bar" title="Click to copy Composer command">
+                <div class="dt-composer-content">
+                  <span class="dt-composer-prompt">$</span>
+                  <code class="dt-composer-code" title="${this.escapeHTML(composerCmd)}">${this.escapeHTML(composerCmd)}</code>
+                </div>
+                <button class="dt-copy-btn" title="Copy command to clipboard" aria-label="Copy composer command">
+                  <span class="dt-copy-icon-wrap">${icons.copy({ size: 12, color: 'currentColor' })}</span>
+                  <span class="dt-copy-label">Copy</span>
                 </button>
               </div>
             ` : ''}
           </div>
 
-          <!-- Drawer Scrollable Body -->
+          <!-- Drawer Body -->
           <div class="dt-drawer-body">
             <!-- 5 Objective Pillars (Unified High-Density Scorecard) -->
             <div class="dt-scorecard">
@@ -202,7 +208,7 @@ class DropTrendsUI {
               </div>
             </div>
 
-            <!-- Key Signals & Insights (Compact 2-Column or Row Grid) -->
+            <!-- Key Signals & Insights -->
             <div class="dt-section">
               <span class="dt-section-label">Key Signals & Badges</span>
               <div class="dt-signals-grid">
@@ -252,7 +258,7 @@ class DropTrendsUI {
     shadow.appendChild(pill);
     shadow.appendChild(modalOverlay);
 
-    // Event binding
+    // Event handlers
     const setupEvents = () => {
       const openModal = () => {
         modalOverlay.classList.add('dt-active');
@@ -295,22 +301,32 @@ class DropTrendsUI {
       });
 
       // Copy Composer Command
-      const copyBtn = modalOverlay.querySelector('.dt-copy-btn');
-      if (copyBtn) {
-        copyBtn.onclick = async () => {
+      const composerBar = modalOverlay.querySelector('.dt-composer-bar');
+      if (composerBar) {
+        const copyBtn = composerBar.querySelector('.dt-copy-btn');
+        const copyLabel = composerBar.querySelector('.dt-copy-label');
+        const copyIconWrap = composerBar.querySelector('.dt-copy-icon-wrap');
+
+        composerBar.onclick = async () => {
           const activeRel = rawData.releases?.find(r => r.version === currentVersion) || rawData.releases?.[0];
-          const cmd = activeRel?.composerCommand || rawData.composerCommand;
+          const cmd = activeRel?.composerCommand 
+            || (typeof DrupalDomExtractor !== 'undefined' ? DrupalDomExtractor.generateComposerCommand(rawData.machineName, activeRel?.version, activeRel?.isStable) : null)
+            || rawData.composerCommand
+            || `composer require drupal/${rawData.machineName}`;
           if (cmd) {
             try {
               await navigator.clipboard.writeText(cmd);
-              const label = copyBtn.querySelector('span');
-              if (label) label.textContent = 'Copied!';
-              copyBtn.style.backgroundColor = '#059669';
+              if (copyBtn) copyBtn.classList.add('dt-copied');
+              if (copyLabel) copyLabel.textContent = 'Copied!';
+              if (copyIconWrap) copyIconWrap.innerHTML = icons.check({ size: 12, color: '#ffffff' });
               setTimeout(() => {
-                if (label) label.textContent = 'Copy';
-                copyBtn.style.backgroundColor = '';
+                if (copyBtn) copyBtn.classList.remove('dt-copied');
+                if (copyLabel) copyLabel.textContent = 'Copy';
+                if (copyIconWrap) copyIconWrap.innerHTML = icons.copy({ size: 12, color: 'currentColor' });
               }, 2000);
-            } catch {}
+            } catch (err) {
+              console.warn('[DropTrends] Clipboard write failed:', err);
+            }
           }
         };
       }
@@ -318,7 +334,6 @@ class DropTrendsUI {
 
     setupEvents();
 
-    // Mount to page header
     const pageTitle = document.querySelector('#page-title');
     if (pageTitle) {
       pageTitle.appendChild(rootHost);
@@ -331,7 +346,6 @@ class DropTrendsUI {
       }
     }
 
-    // Mount inline badges to Releases download table
     this.mountReleasesTableBadges(rawData);
   }
 
@@ -452,17 +466,12 @@ class DropTrendsUI {
       .dt-score-badge {
         display: inline-flex;
         align-items: center;
-        gap: 3px;
         color: #ffffff;
-        font-weight: 700;
-        font-size: 11px;
+        font-weight: 800;
+        font-size: 11.5px;
         padding: 1px 6px;
         border-radius: 9999px;
         line-height: 1.2;
-      }
-      .dt-score-grade {
-        opacity: 0.9;
-        font-size: 10px;
       }
       .dt-chip {
         display: inline-flex;
@@ -502,9 +511,9 @@ class DropTrendsUI {
         pointer-events: auto;
       }
 
-      /* Drawer Container (Linear-grade, 440px width) */
+      /* Drawer Container (Linear-grade, 460px width) */
       .dt-drawer {
-        width: 440px;
+        width: 460px;
         max-width: 95vw;
         height: 100vh;
         background: #ffffff;
@@ -523,7 +532,7 @@ class DropTrendsUI {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 14px 16px;
+        padding: 12px 16px;
         border-bottom: 1px solid #e2e8f0;
         background: #f8fafc;
         gap: 12px;
@@ -639,18 +648,17 @@ class DropTrendsUI {
       /* Integrated Action & Release Strip */
       .dt-action-strip {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
+        flex-direction: column;
+        gap: 8px;
         padding: 8px 16px;
-        background: #ffffff;
-        border-bottom: 1px solid #f1f5f9;
-        gap: 10px;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
       }
-      .dt-release-segmented {
+      .dt-release-row {
         display: flex;
         align-items: center;
-        gap: 6px;
-        flex-shrink: 0;
+        gap: 8px;
+        flex-wrap: wrap;
       }
       .dt-release-lead {
         font-size: 11px;
@@ -658,15 +666,18 @@ class DropTrendsUI {
         text-transform: uppercase;
         color: #64748b;
         letter-spacing: 0.04em;
+        flex-shrink: 0;
       }
       .dt-release-buttons {
         display: flex;
         gap: 4px;
+        flex-wrap: wrap;
+        align-items: center;
       }
       .dt-rel-btn {
-        background: #f1f5f9;
-        border: 1px solid #e2e8f0;
-        color: #475569;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #334155;
         font-size: 11px;
         font-weight: 600;
         padding: 2px 7px;
@@ -674,11 +685,12 @@ class DropTrendsUI {
         cursor: pointer;
         display: inline-flex;
         align-items: center;
-        gap: 3px;
-        transition: all 0.12s;
+        gap: 4px;
+        transition: all 0.12s ease;
       }
       .dt-rel-btn:hover {
-        background: #e2e8f0;
+        background: #f1f5f9;
+        border-color: #94a3b8;
         color: #0f172a;
       }
       .dt-rel-btn.dt-rel-active {
@@ -688,54 +700,109 @@ class DropTrendsUI {
       }
       .dt-rel-tag {
         font-size: 9px;
-        opacity: 0.9;
+        font-weight: 700;
+        padding: 0.5px 4px;
+        border-radius: 3px;
+        line-height: 1.2;
+      }
+      .dt-rel-btn .dt-tag-stable {
+        background: rgba(5, 150, 105, 0.12);
+        color: #059669;
+      }
+      .dt-rel-btn.dt-rel-active .dt-tag-stable {
+        background: rgba(255, 255, 255, 0.25);
+        color: #ffffff;
+      }
+      .dt-rel-btn .dt-tag-pre {
+        background: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+      }
+      .dt-rel-btn.dt-rel-active .dt-tag-pre {
+        background: rgba(255, 255, 255, 0.25);
+        color: #ffffff;
       }
 
+      /* Full-Width Terminal-Grade Composer Bar */
       .dt-composer-bar {
         display: flex;
         align-items: center;
-        background: #f8fafc;
-        border: 1px solid #cbd5e1;
-        border-radius: 4px;
-        padding: 1px 4px 1px 6px;
-        gap: 6px;
-        max-width: 210px;
+        justify-content: space-between;
+        background: #0f172a;
+        border: 1px solid #1e293b;
+        border-radius: 6px;
+        padding: 5px 8px 5px 10px;
+        gap: 8px;
+        width: 100%;
+        box-sizing: border-box;
+        cursor: pointer;
+        transition: border-color 0.15s, background-color 0.15s;
       }
-      .dt-composer-bar code {
+      .dt-composer-bar:hover {
+        border-color: #38bdf8;
+        background: #0b1329;
+      }
+      .dt-composer-content {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        flex: 1;
+      }
+      .dt-composer-prompt {
+        color: #38bdf8;
         font-family: ui-monospace, SFMono-Regular, monospace;
-        font-size: 10.5px;
-        color: #0f172a;
+        font-size: 11px;
+        font-weight: 700;
+        user-select: none;
+        flex-shrink: 0;
+      }
+      .dt-composer-code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 11px;
+        color: #f1f5f9;
+        white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap;
+        min-width: 0;
       }
       .dt-copy-btn {
-        background: #0284c7;
-        color: #ffffff;
-        border: none;
-        font-size: 10px;
+        background: #1e293b;
+        color: #cbd5e1;
+        border: 1px solid #334155;
+        font-size: 10.5px;
         font-weight: 600;
-        padding: 2px 6px;
-        border-radius: 3px;
+        padding: 3px 8px;
+        border-radius: 4px;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
-        gap: 3px;
+        gap: 4px;
         flex-shrink: 0;
-        transition: background 0.12s;
+        transition: all 0.15s ease;
       }
       .dt-copy-btn:hover {
-        background: #0369a1;
+        background: #0284c7;
+        border-color: #0284c7;
+        color: #ffffff;
+      }
+      .dt-copy-btn.dt-copied {
+        background: #059669;
+        border-color: #059669;
+        color: #ffffff;
+      }
+      .dt-copy-icon-wrap {
+        display: inline-flex;
+        align-items: center;
       }
 
       /* Body Layout */
       .dt-drawer-body {
         flex: 1;
         overflow-y: auto;
-        padding: 14px 16px;
+        padding: 12px 16px;
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 12px;
       }
 
       /* Unified Scorecard Box */
@@ -750,7 +817,7 @@ class DropTrendsUI {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 12px;
+        padding: 7px 12px;
         background: #f8fafc;
         border-bottom: 1px solid #e2e8f0;
       }
@@ -774,7 +841,7 @@ class DropTrendsUI {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 7px 12px;
+        padding: 6px 12px;
         border-bottom: 1px solid #f1f5f9;
         gap: 10px;
       }
@@ -901,7 +968,7 @@ class DropTrendsUI {
 
       /* Drawer Footer */
       .dt-drawer-footer {
-        padding: 9px 16px;
+        padding: 8px 16px;
         border-top: 1px solid #e2e8f0;
         background: #f8fafc;
         display: flex;
