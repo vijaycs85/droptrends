@@ -264,4 +264,29 @@ describe('DropScore Engine Unit Tests', () => {
       DropScoreEngine.resetCoreSchedule();
     }
   });
+
+  it('automatically infers PHP 8.5+ minimum requirement from Drupal 12 compatibility', () => {
+    const mockD12Module = {
+      machineName: 'd12_php85_mod',
+      title: 'Drupal 12 PHP 8.5 Module',
+      isSecurityCovered: true,
+      activeInstalls: 8000,
+      lastReleaseDaysAgo: 15,
+      supportsDrupal12: true,
+      supportsDrupal11: true,
+      supportsDrupal10: true,
+      modernPhpSupported: false, // Omitted or false in raw DOM
+      maintainersCount: 2,
+      sponsorsCount: 1,
+      gitlabPipelineStatus: 'passed',
+      hasAutomatedTests: true
+    };
+
+    const result = evaluateDropScore(mockD12Module);
+    assert.strictEqual(result.pillars.modernity.score, 20);
+    assert.strictEqual(result.pillars.modernity.breakdown.modernPhp, 2);
+    assert.strictEqual(result.pillars.modernity.breakdown.phpLabel, 'PHP 8.5+');
+    assert.strictEqual(result.pillars.modernity.breakdown.supportsPhp85, true);
+    assert.ok(result.pillars.modernity.breakdown.summaryText.includes('PHP 8.5+: 2/2'));
+  });
 });

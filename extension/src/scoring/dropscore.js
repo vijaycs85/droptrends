@@ -11,7 +11,7 @@ const DEFAULT_DRUPAL_CORE_SCHEDULE = {
   leavingSupportMajor: 10,
   leavingSupportDate: 'November 2026',
   versions: {
-    12: { major: 12, label: 'Drupal 12', minPhp: '8.3+', status: 'upcoming' },
+    12: { major: 12, label: 'Drupal 12', minPhp: '8.5+', status: 'upcoming' },
     11: { major: 11, label: 'Drupal 11', minPhp: '8.3+', status: 'active' },
     10: { major: 10, label: 'Drupal 10', minPhp: '8.1+', status: 'leaving_support', eolDate: 'November 2026' }
   }
@@ -153,13 +153,18 @@ class DropScoreEngine {
     const hasD12 = Boolean(effectiveData.supportsDrupal12);
     const hasD11 = Boolean(effectiveData.supportsDrupal11);
     const hasD10 = Boolean(effectiveData.supportsDrupal10);
-    // Drupal 11 & 12 require PHP 8.3 minimum; D11/D12 support guarantees PHP 8.3+
+    // Drupal 12 has a minimum requirement of PHP 8.5; Drupal 11 requires PHP 8.3 minimum.
+    // D12 support guarantees PHP 8.5+; D11 support guarantees PHP 8.3+.
+    const hasPhp85 = Boolean(effectiveData.supportsPhp85) || hasD12;
     const hasModernPhp = hasD12 || hasD11 || Boolean(effectiveData.modernPhpSupported);
 
     let activeCorePoints = 0;
     let ltsCorePoints = 0;
     let phpPoints = hasModernPhp ? 2 : 0;
     let summaryText = '';
+
+    // Target PHP runtime label: PHP 8.5+ when D12 is active or supported; otherwise PHP 8.3+
+    const targetPhpLabel = isD12Active ? 'PHP 8.5+' : (hasD12 ? 'PHP 8.5+' : 'PHP 8.3+');
 
     if (isD12Active) {
       // Future era when Drupal 12 is released and primary
@@ -168,14 +173,14 @@ class DropScoreEngine {
       // Drupal 10: 0 pts (fully EOL)
       activeCorePoints = hasD12 ? 12 : 0;
       ltsCorePoints = hasD11 ? 6 : 0;
-      summaryText = `Drupal 12: ${activeCorePoints}/12 · Drupal 11 (LTS): ${ltsCorePoints}/6 · PHP 8.3+: ${phpPoints}/2`;
+      summaryText = `Drupal 12: ${activeCorePoints}/12 · Drupal 11 (LTS): ${ltsCorePoints}/6 · PHP 8.5+: ${phpPoints}/2`;
     } else {
       // Current era: Drupal 11 active, D12 upcoming, D10 leaving support in Nov 2026
       // Supporting Drupal 12 or Drupal 11 awards the primary 12 pts
       activeCorePoints = (hasD12 || hasD11) ? 12 : 0;
       ltsCorePoints = hasD10 ? 6 : 0;
       const primaryLabel = hasD12 ? 'Drupal 12/11' : 'Drupal 11';
-      summaryText = `${primaryLabel}: ${activeCorePoints}/12 · Drupal 10 (EOL Nov '26): ${ltsCorePoints}/6 · PHP 8.3+: ${phpPoints}/2`;
+      summaryText = `${primaryLabel}: ${activeCorePoints}/12 · Drupal 10 (EOL Nov '26): ${ltsCorePoints}/6 · ${targetPhpLabel}: ${phpPoints}/2`;
     }
 
     const modernityScore = Math.max(0, Math.min(20, activeCorePoints + ltsCorePoints + phpPoints));
@@ -185,6 +190,8 @@ class DropScoreEngine {
       drupal11: hasD11 ? (isD12Active ? ltsCorePoints : activeCorePoints) : 0,
       drupal10: hasD10 ? (isD12Active ? 0 : ltsCorePoints) : 0,
       modernPhp: phpPoints,
+      phpLabel: targetPhpLabel,
+      supportsPhp85: hasPhp85,
       activeCore: activeCorePoints,
       ltsCore: ltsCorePoints,
       summaryText,
@@ -448,6 +455,12 @@ class DropScoreEngine {
         recommendations.push({
           topic: 'Drupal 11',
           action: 'Missing Drupal 11 LTS support. Run Upgrade Status or drupal-check to resolve deprecated APIs (+6 pts).'
+        });
+      }
+      if (!hasD12 && !hasModernPhp) {
+        recommendations.push({
+          topic: 'PHP 8.5+',
+          action: 'Ensure codebase is tested against PHP 8.5+ runtimes (Drupal 12 baseline) to prevent runtime deprecation warnings (+2 pts).'
         });
       }
     } else {

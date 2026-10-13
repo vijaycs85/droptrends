@@ -235,7 +235,7 @@ class DropTrendsUI {
                   evalData.pillars.modernity.score,
                   20,
                   evalData.pillars.modernity.breakdown.summaryText ||
-                  `Drupal 11: ${evalData.pillars.modernity.breakdown.drupal11}/12 · Drupal 10 (EOL Nov '26): ${evalData.pillars.modernity.breakdown.drupal10}/6 · PHP 8.3+: ${evalData.pillars.modernity.breakdown.modernPhp}/2`
+                  `Drupal 11: ${evalData.pillars.modernity.breakdown.drupal11}/12 · Drupal 10 (EOL Nov '26): ${evalData.pillars.modernity.breakdown.drupal10}/6 · ${evalData.pillars.modernity.breakdown.phpLabel || 'PHP 8.3+'}: ${evalData.pillars.modernity.breakdown.modernPhp}/2`
                 )}
                 ${this.renderPillarRow(
                   icons.flask({ size: 14, color: '#0891b2' }),

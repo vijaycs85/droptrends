@@ -174,6 +174,7 @@ class DrupalDomExtractor {
       supportsDrupal12: recommendedRelease?.supportsD12 || pageCompatibility.supportsD12 || false,
       supportsDrupal11: recommendedRelease?.supportsD11 || pageCompatibility.supportsD11 || false,
       supportsDrupal10: recommendedRelease?.supportsD10 || pageCompatibility.supportsD10 || false,
+      supportsPhp85: recommendedRelease?.supportsPhp85 || pageCompatibility.supportsPhp85 || false,
       modernPhpSupported: recommendedRelease?.modernPhp || pageCompatibility.modernPhp,
       isRecipeReady: recommendedRelease?.recipeReady || pageCompatibility.recipeReady,
       compatibilityStrings: recommendedRelease?.compatibilityStrings || pageCompatibility.strings,
@@ -425,7 +426,8 @@ class DrupalDomExtractor {
       if (/\bdrupal12\b|\bdrupal-12\b|\bDrupal 12\b|\^12\b/.test(rowText)) supportsD12 = true;
       if (/\bdrupal11\b|\bdrupal-11\b|\bDrupal 11\b|\^11\b/.test(rowText)) supportsD11 = true;
       if (/\bdrupal10\b|\bdrupal-10\b|\bDrupal 10\b|\^10\b/.test(rowText)) supportsD10 = true;
-      // Drupal 11 & 12 have a minimum requirement of PHP 8.3; D11/D12 support guarantees PHP 8.3+
+      // Drupal 12 has a minimum requirement of PHP 8.5; Drupal 11 requires PHP 8.3
+      const supportsPhp85 = supportsD12 || /PHP\s*8\.[5-9]/i.test(rowText);
       if (supportsD12 || supportsD11 || /PHP\s*8\.[3-9]/i.test(rowText)) modernPhp = true;
       if (/recipe|drupal cms/i.test(rowText)) recipeReady = true;
 
@@ -444,6 +446,7 @@ class DrupalDomExtractor {
         supportsD12,
         supportsD11,
         supportsD10,
+        supportsPhp85,
         modernPhp,
         recipeReady,
         branch,
@@ -519,7 +522,8 @@ class DrupalDomExtractor {
       supportsD10 = true;
       strings.push('Drupal 10');
     }
-    // Drupal 11 & 12 require PHP 8.3 minimum; if D11 or D12 is supported, PHP 8.3+ is inherently supported
+    // Drupal 12 requires PHP 8.5 minimum; Drupal 11 requires PHP 8.3 minimum
+    const supportsPhp85 = supportsD12 || /PHP\s*8\.[5-9]/i.test(pageText);
     if (supportsD12 || supportsD11 || /PHP\s*8\.[3-9]/i.test(pageText)) {
       modernPhp = true;
     }
@@ -527,7 +531,7 @@ class DrupalDomExtractor {
       recipeReady = true;
     }
 
-    return { strings, supportsD12, supportsD11, supportsD10, modernPhp, recipeReady };
+    return { strings, supportsD12, supportsD11, supportsD10, supportsPhp85, modernPhp, recipeReady };
   }
 
   static extractMaintenanceStatus(doc) {
