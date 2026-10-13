@@ -219,14 +219,14 @@ class DropTrendsUI {
                   'Maintenance & Velocity',
                   evalData.pillars.maintenance.score,
                   25,
-                  `Status: ${evalData.pillars.maintenance.breakdown.status}/10 · Recency: ${evalData.pillars.maintenance.breakdown.recency}/8 (${evalData.activeVersion}) · Queue: ${evalData.pillars.maintenance.breakdown.issues}/7`
+                  `Status: ${evalData.pillars.maintenance.breakdown.statusLabel ? `${evalData.pillars.maintenance.breakdown.statusLabel} ` : ''}(${evalData.pillars.maintenance.breakdown.status}/10) · Recency: ${evalData.pillars.maintenance.breakdown.recency}/8 (${evalData.activeVersion}) · Queue: ${evalData.pillars.maintenance.breakdown.issues}/7`
                 )}
                 ${this.renderPillarRow(
                   icons.rocket({ size: 14, color: '#2563eb' }),
                   'Modernity & Compatibility',
                   evalData.pillars.modernity.score,
                   20,
-                  `Drupal 11: ${evalData.pillars.modernity.breakdown.drupal11}/10 · Drupal 10: ${evalData.pillars.modernity.breakdown.drupal10}/6 · PHP 8.2+: ${evalData.pillars.modernity.breakdown.modernPhp}/2`
+                  `Drupal 11: ${evalData.pillars.modernity.breakdown.drupal11}/12 · Drupal 10: ${evalData.pillars.modernity.breakdown.drupal10}/6 · PHP 8.2+: ${evalData.pillars.modernity.breakdown.modernPhp}/2`
                 )}
                 ${this.renderPillarRow(
                   icons.flask({ size: 14, color: '#0891b2' }),

@@ -40,22 +40,39 @@ class DropScoreEngine {
     securityScore = Math.max(0, Math.min(25, securityScore));
 
     // 2. Pillar: Maintenance & Velocity (25 pts)
-    let statusPoints = 5;
+    let statusPoints = 6;
+    let statusLabel = 'Maintained';
     const maintStatus = (effectiveData.maintenanceStatus || '').toLowerCase();
     const devStatus = (effectiveData.developmentStatus || '').toLowerCase();
 
     if (maintStatus.includes('actively maintained') || devStatus.includes('active development')) {
       statusPoints = 10;
+      statusLabel = 'Active';
     } else if (maintStatus.includes('minimally maintained') || devStatus.includes('maintenance fixes only')) {
       statusPoints = 6;
+      statusLabel = 'Maintenance Only';
     } else if (maintStatus.includes('seeking co-maintainer')) {
       statusPoints = 5;
+      statusLabel = 'Seeking Co-maintainer';
     } else if (maintStatus.includes('seeking new maintainer')) {
       statusPoints = 2;
+      statusLabel = 'Seeking Maintainer';
     } else if (maintStatus.includes('unsupported') || devStatus.includes('obsolete') || devStatus.includes('no further')) {
       statusPoints = 0;
+      statusLabel = 'Unsupported';
     } else {
-      statusPoints = 6; // Neutral default when status is unstated
+      // Status unstated on Drupal.org node: infer from release activity and recency
+      const days = typeof effectiveData.lastReleaseDaysAgo === 'number' ? effectiveData.lastReleaseDaysAgo : null;
+      if (days !== null && days <= 365) {
+        statusPoints = 10;
+        statusLabel = 'Active';
+      } else if (days !== null && days <= 730) {
+        statusPoints = 8;
+        statusLabel = 'Maintained';
+      } else {
+        statusPoints = 6;
+        statusLabel = 'Unstated';
+      }
     }
 
     let recencyPoints = 0;
@@ -94,24 +111,23 @@ class DropScoreEngine {
 
     const maintenanceBreakdown = {
       status: statusPoints,
+      statusLabel,
       recency: recencyPoints,
       issues: issuePoints
     };
     let maintenanceScore = Math.max(0, Math.min(25, statusPoints + recencyPoints + issuePoints));
 
     // 3. Pillar: Modernity & Compatibility (20 pts)
-    const d11Points = effectiveData.supportsDrupal11 ? 10 : 0;
+    const d11Points = effectiveData.supportsDrupal11 ? 12 : 0;
     const d10Points = effectiveData.supportsDrupal10 ? 6 : 0;
-    const phpPoints = effectiveData.modernPhpSupported ? 2 : 1;
-    const recipePoints = (effectiveData.isRecipeReady || effectiveData.projectType?.includes('Site Template')) ? 2 : 1;
+    const phpPoints = effectiveData.modernPhpSupported ? 2 : 0;
 
     const modernityBreakdown = {
       drupal11: d11Points,
       drupal10: d10Points,
-      modernPhp: phpPoints,
-      recipes: recipePoints
+      modernPhp: phpPoints
     };
-    let modernityScore = Math.max(0, Math.min(20, d11Points + d10Points + phpPoints + recipePoints));
+    let modernityScore = Math.max(0, Math.min(20, d11Points + d10Points + phpPoints));
 
     // 4. Pillar: Code Quality & CI (15 pts)
     let pipelinePoints = 4;
