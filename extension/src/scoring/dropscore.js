@@ -73,34 +73,100 @@ class DropScoreEngine {
     let statusLabel = 'Maintained';
     const maintStatus = (effectiveData.maintenanceStatus || '').toLowerCase();
     const devStatus = (effectiveData.developmentStatus || '').toLowerCase();
+    const isSecurityRevoked = Boolean(effectiveData.isSecurityRevoked) || effectiveData.securityCoverageStatus === 'revoked';
 
-    if (maintStatus.includes('actively maintained') || devStatus.includes('active development')) {
-      statusPoints = 10;
-      statusLabel = 'Active';
-    } else if (maintStatus.includes('minimally maintained') || devStatus.includes('maintenance fixes only')) {
-      statusPoints = 6;
-      statusLabel = 'Maintenance Only';
-    } else if (maintStatus.includes('seeking co-maintainer')) {
-      statusPoints = 5;
-      statusLabel = 'Seeking Co-maintainer';
-    } else if (maintStatus.includes('seeking new maintainer')) {
-      statusPoints = 2;
-      statusLabel = 'Seeking Maintainer';
-    } else if (maintStatus.includes('unsupported') || devStatus.includes('obsolete') || devStatus.includes('no further')) {
+    // Disqualification Checks (Obsolete, Unsupported, Security Revoked)
+    const isObsolete = devStatus.includes('obsolete');
+    const isUnsupported = maintStatus.includes('unsupported');
+    const isRevoked = isSecurityRevoked;
+    const isDisqualified = isObsolete || isUnsupported || isRevoked;
+    let disqualificationReason = null;
+    let disclaimer = null;
+
+    if (isObsolete) {
+      disqualificationReason = 'obsolete';
+      disclaimer = {
+        type: 'critical',
+        title: 'Obsolete Project (Deprecated)',
+        message: 'Use of this project is deprecated by its maintainers. Do not install or recommend on new projects; migrate to an actively maintained alternative.'
+      };
+      statusPoints = 0;
+      statusLabel = 'Obsolete';
+    } else if (isUnsupported) {
+      disqualificationReason = 'unsupported';
+      disclaimer = {
+        type: 'critical',
+        title: 'Unsupported Project (Abandoned)',
+        message: 'This project is marked as unsupported and is no longer being developed or maintained. Do not install on production sites.'
+      };
       statusPoints = 0;
       statusLabel = 'Unsupported';
+    } else if (isRevoked) {
+      disqualificationReason = 'security_revoked';
+      disclaimer = {
+        type: 'critical',
+        title: 'Security Advisory Coverage Revoked',
+        message: 'This project was marked unsupported due to an unpatched security issue. Immediate risk—do not install.'
+      };
+      statusPoints = 0;
+      statusLabel = 'Revoked';
     } else {
-      // Status unstated on Drupal.org node: infer from release activity and recency
-      const days = typeof effectiveData.lastReleaseDaysAgo === 'number' ? effectiveData.lastReleaseDaysAgo : null;
-      if (days !== null && days <= 365) {
+      if (maintStatus.includes('actively maintained') || devStatus.includes('active development')) {
         statusPoints = 10;
         statusLabel = 'Active';
-      } else if (days !== null && days <= 730) {
-        statusPoints = 8;
-        statusLabel = 'Maintained';
-      } else {
+      } else if (maintStatus.includes('minimally maintained')) {
+        statusPoints = 4;
+        statusLabel = 'Minimally Maintained';
+        disclaimer = {
+          type: 'warning',
+          title: 'Minimally Maintained',
+          message: 'The maintainer only resolves essential issues occasionally. Expect longer response times and limited active feature development.'
+        };
+      } else if (devStatus.includes('no further')) {
+        statusPoints = 2;
+        statusLabel = 'No Further Dev';
+        disclaimer = {
+          type: 'warning',
+          title: 'No Further Development',
+          message: 'Maintainers have stopped developing this project. It will not receive feature additions or future major version compatibility updates.'
+        };
+      } else if (maintStatus.includes('seeking new maintainer')) {
+        statusPoints = 2;
+        statusLabel = 'Seeking Maintainer';
+        disclaimer = {
+          type: 'warning',
+          title: 'Seeking New Maintainer',
+          message: 'The current author is looking to hand off the project to a new maintainer. Support may be delayed if untended.'
+        };
+      } else if (maintStatus.includes('seeking co-maintainer')) {
+        statusPoints = 5;
+        statusLabel = 'Seeking Co-maintainer';
+        disclaimer = {
+          type: 'info',
+          title: 'Seeking Co-maintainers',
+          message: 'The maintainer is actively seeking co-maintainers to help triage issues and review patches.'
+        };
+      } else if (devStatus.includes('maintenance fixes only')) {
         statusPoints = 6;
-        statusLabel = 'Unstated';
+        statusLabel = 'Fixes Only';
+        disclaimer = {
+          type: 'info',
+          title: 'Maintenance Fixes Only',
+          message: 'Only bugfixes and maintenance patches will be accepted. No new feature development is planned.'
+        };
+      } else {
+        // Status unstated on Drupal.org node: infer from release activity and recency
+        const days = typeof effectiveData.lastReleaseDaysAgo === 'number' ? effectiveData.lastReleaseDaysAgo : null;
+        if (days !== null && days <= 365) {
+          statusPoints = 10;
+          statusLabel = 'Active';
+        } else if (days !== null && days <= 730) {
+          statusPoints = 8;
+          statusLabel = 'Maintained';
+        } else {
+          statusPoints = 6;
+          statusLabel = 'Unstated';
+        }
       }
     }
 
@@ -290,36 +356,48 @@ class DropScoreEngine {
     let adoptionScore = Math.max(0, Math.min(15, installPoints + contribPoints));
 
     // Total Score
-    let rawScore = securityScore + maintenanceScore + modernityScore + qualityScore + adoptionScore;
-
-    // Penalty for explicitly unsupported or obsolete projects
-    let isUnsupported = maintStatus.includes('unsupported') || devStatus.includes('obsolete');
-    if (isUnsupported) {
-      rawScore = Math.min(rawScore, 35);
-    }
-
-    const totalScore = Math.max(0, Math.min(100, Math.round(rawScore)));
-
-    // Modern Benchmarking Labels (No academic school letter grades A/B/C/D)
-    // Brand-new projects (<90 days) are explicitly labeled "Emerging"
+    let totalScore = 0;
     let gradeLabel = 'Needs Attention';
     let gradeColor = '#dc2626'; // Crimson
 
-    if (effectiveData.isEmergingProject && totalScore >= 45) {
-      gradeLabel = 'Emerging';
-      gradeColor = '#d97706'; // Amber / Bronze
-    } else if (totalScore >= 90) {
-      gradeLabel = 'Exceptional';
-      gradeColor = '#059669'; // Emerald
-    } else if (totalScore >= 75) {
-      gradeLabel = 'Healthy';
-      gradeColor = '#0891b2'; // Teal / Cyan
-    } else if (totalScore >= 60) {
-      gradeLabel = 'Stable';
-      gradeColor = '#2563eb'; // Royal Blue
-    } else if (totalScore >= 45) {
-      gradeLabel = 'Maturing';
-      gradeColor = '#d97706'; // Amber / Bronze
+    if (isDisqualified) {
+      totalScore = 0;
+      if (isObsolete) {
+        gradeLabel = 'Obsolete';
+      } else if (isUnsupported) {
+        gradeLabel = 'Unsupported';
+      } else {
+        gradeLabel = 'Security Revoked';
+      }
+      gradeColor = '#dc2626';
+    } else {
+      let rawScore = securityScore + maintenanceScore + modernityScore + qualityScore + adoptionScore;
+
+      // Cap at 50 if maintainers declared no further development
+      if (devStatus.includes('no further')) {
+        rawScore = Math.min(rawScore, 50);
+      }
+
+      totalScore = Math.max(0, Math.min(100, Math.round(rawScore)));
+
+      // Modern Benchmarking Labels (No academic school letter grades A/B/C/D)
+      // Brand-new projects (<90 days) are explicitly labeled "Emerging"
+      if (effectiveData.isEmergingProject && totalScore >= 45) {
+        gradeLabel = 'Emerging';
+        gradeColor = '#d97706'; // Amber / Bronze
+      } else if (totalScore >= 90) {
+        gradeLabel = 'Exceptional';
+        gradeColor = '#059669'; // Emerald
+      } else if (totalScore >= 75) {
+        gradeLabel = 'Healthy';
+        gradeColor = '#0891b2'; // Teal / Cyan
+      } else if (totalScore >= 60) {
+        gradeLabel = 'Stable';
+        gradeColor = '#2563eb'; // Royal Blue
+      } else if (totalScore >= 45) {
+        gradeLabel = 'Maturing';
+        gradeColor = '#d97706'; // Amber / Bronze
+      }
     }
 
     // Flags & Signals
@@ -423,32 +501,69 @@ class DropScoreEngine {
       });
     }
 
-    if (isUnsupported) {
-      flags.push({
+    if (isDisqualified) {
+      flags.unshift({
         type: 'critical',
         icon: 'alertCircle',
-        text: 'Unsupported / Obsolete',
-        description: 'Maintainers marked this project as unsupported or obsolete.'
+        text: gradeLabel,
+        description: disclaimer.message
+      });
+    } else if (disclaimer) {
+      flags.push({
+        type: disclaimer.type === 'critical' ? 'critical' : (disclaimer.type === 'warning' ? 'warning' : 'positive'),
+        icon: disclaimer.type === 'info' ? 'users' : 'alertCircle',
+        text: disclaimer.title,
+        description: disclaimer.message
       });
     }
 
     const recommendations = [];
 
+    if (isDisqualified) {
+      recommendations.push({
+        topic: gradeLabel,
+        action: isObsolete
+          ? 'Use of this project is deprecated by its maintainers. Do not install on new projects; migrate to an actively maintained alternative.'
+          : (isUnsupported
+            ? 'Maintainers have marked this project as unsupported. Migrate to an active alternative or apply for project ownership on Drupal.org.'
+            : 'Security coverage has been revoked due to an unpatched vulnerability. Remove this project immediately.')
+      });
+    } else {
+      if (maintStatus.includes('minimally maintained')) {
+        recommendations.push({
+          topic: 'Minimally Maintained',
+          action: 'The project is minimally maintained. Site builders should be prepared to maintain local patches or join as co-maintainer to help.'
+        });
+      }
+      if (devStatus.includes('no further')) {
+        recommendations.push({
+          topic: 'No Further Development',
+          action: 'No further development is planned. Plan ahead for future Drupal major versions by identifying an active replacement.'
+        });
+      }
+      if (maintStatus.includes('seeking new maintainer')) {
+        recommendations.push({
+          topic: 'Seeking Maintainer',
+          action: 'Maintainers are seeking a new owner. Community developers can apply via the Drupal.org project ownership process.'
+        });
+      }
+    }
+
     // 1. Security & Trust Recommendations
-    if (!effectiveData.isSecurityCovered) {
+    if (!effectiveData.isSecurityCovered && !isDisqualified) {
       recommendations.push({
         topic: 'Security Advisory',
         action: 'Releases are not covered by the Drupal Security Advisory policy. Maintainers can opt in via Drupal.org project settings (+16 pts); site builders should perform manual security audits.'
       });
     }
-    if (maintainers === 1 && !effectiveData.isEmergingProject) {
+    if (maintainers === 1 && !effectiveData.isEmergingProject && !isDisqualified) {
       recommendations.push({
         topic: 'Bus Factor',
         action: 'Single maintainer identified. Onboard active contributors as co-maintainers on Drupal.org to safeguard continuity (+3 pts).'
       });
     }
     const sponsors = effectiveData.sponsorsCount || 0;
-    if (sponsors === 0 && installs >= 1000) {
+    if (sponsors === 0 && installs >= 1000 && !isDisqualified) {
       recommendations.push({
         topic: 'Sponsorship',
         action: 'No supporting organizations listed. Sponsoring organizations can link their Drupal.org profile to improve trust signals (+4 pts).'
@@ -456,142 +571,141 @@ class DropScoreEngine {
     }
 
     // 2. Maintenance & Velocity Recommendations
-    if (daysAgo !== null && daysAgo > 180) {
+    if (daysAgo !== null && daysAgo > 180 && !isDisqualified) {
       const months = Math.floor(daysAgo / 30);
       recommendations.push({
         topic: 'Release Cadence',
         action: `Latest stable release (${effectiveData.activeVersion}) is over ${months} months old. Tagging a new release from the dev branch will ship accumulated bugfixes and recover up to +5 velocity points.`
       });
     }
-    if (maintStatus.includes('seeking co-maintainer')) {
+    if (maintStatus.includes('seeking co-maintainer') && !isDisqualified) {
       recommendations.push({
         topic: 'Co-maintainer',
         action: 'Maintainers are actively seeking assistance. Community developers can apply in the Drupal.org issue queue.'
       });
     }
-    if (isUnsupported) {
-      recommendations.push({
-        topic: 'Unsupported Project',
-        action: 'Maintainers marked this project as unsupported or obsolete. Adopt this module via Drupal\'s project ownership process or migrate to an active alternative.'
-      });
-    }
-    if (rtbc >= 5) {
-      recommendations.push({
-        topic: 'Queue Velocity',
-        action: `${rtbc} community-reviewed (RTBC) patches are waiting in the queue. Review and commit them to clear the backlog.`
-      });
-    }
-    if (totalIssues > 10 && openBugs / totalIssues > 0.5) {
-      recommendations.push({
-        topic: 'Issue Triage',
-        action: 'Over 50% of open issues are bug reports. Prioritize triaging bug reports and merging available community fixes.'
-      });
-    }
-
-    // 3. Modernity & Compatibility Recommendations
-    if (isD12Active) {
-      if (!hasD12) {
+    if (!isDisqualified) {
+      if (rtbc >= 5) {
         recommendations.push({
-          topic: 'Drupal 12',
-          action: 'Missing Drupal 12 support. Update core_version_requirement to include ^12 in .info.yml and test against D12 core (+18 pts).'
+          topic: 'Queue Velocity',
+          action: `${rtbc} community-reviewed (RTBC) patches are waiting in the queue. Review and commit them to clear the backlog.`
         });
-        if (!hasD11) {
+      }
+      if (totalIssues > 10 && openBugs / totalIssues > 0.5) {
+        recommendations.push({
+          topic: 'Issue Triage',
+          action: 'Over 50% of open issues are bug reports. Prioritize triaging bug reports and merging available community fixes.'
+        });
+      }
+
+      // 3. Modernity & Compatibility Recommendations
+      if (isD12Active) {
+        if (!hasD12) {
           recommendations.push({
-            topic: 'Drupal 11',
-            action: 'Missing Drupal 11 LTS support. Run Upgrade Status or drupal-check to resolve deprecated APIs (+6 pts).'
+            topic: 'Drupal 12',
+            action: 'Missing Drupal 12 support. Update core_version_requirement to include ^12 in .info.yml and test against D12 core (+18 pts).'
+          });
+          if (!hasD11) {
+            recommendations.push({
+              topic: 'Drupal 11',
+              action: 'Missing Drupal 11 LTS support. Run Upgrade Status or drupal-check to resolve deprecated APIs (+6 pts).'
+            });
+          }
+        }
+        if (!hasD12 && !hasModernPhp) {
+          recommendations.push({
+            topic: 'PHP 8.5+',
+            action: 'Ensure codebase is tested against PHP 8.5+ runtimes (Drupal 12 baseline) to prevent runtime deprecation warnings (+2 pts).'
+          });
+        }
+      } else {
+        // D11 active era
+        if (!hasD11 && !hasD12) {
+          if (hasD10) {
+            recommendations.push({
+              topic: 'Drupal 10 EOL',
+              action: 'Drupal 10 reaches End-of-Life in November 2026. This module lacks Drupal 11+ compatibility. Update core_version_requirement to ^10 || ^11 and test against D11 to prevent site upgrade blockers (+12 pts).'
+            });
+          } else {
+            recommendations.push({
+              topic: 'Drupal 11',
+              action: 'Missing modern Drupal support. Update core_version_requirement to ^10 || ^11 in .info.yml and test against D11 core (+18 pts).'
+            });
+          }
+        }
+        // Never recommend adding legacy Drupal 10 if D11 or D12 is already supported
+        if (!hasD11 && !hasD12 && !hasModernPhp) {
+          recommendations.push({
+            topic: 'PHP 8.3+',
+            action: 'Ensure codebase is tested against PHP 8.3 and PHP 8.4 runtimes (Drupal 11 baseline) to prevent runtime deprecation warnings (+2 pts).'
           });
         }
       }
-      if (!hasD12 && !hasModernPhp) {
+
+      // 4. Code Quality & CI Recommendations
+      if (pipelineStatus === 'failed') {
         recommendations.push({
-          topic: 'PHP 8.5+',
-          action: 'Ensure codebase is tested against PHP 8.5+ runtimes (Drupal 12 baseline) to prevent runtime deprecation warnings (+2 pts).'
+          topic: 'GitLab CI',
+          action: 'Automated GitLab CI pipeline is failing on git.drupalcode.org. Inspect pipeline build logs and resolve test failures (+10 pts).'
+        });
+      } else if (pipelineStatus === 'unknown') {
+        recommendations.push({
+          topic: 'GitLab CI',
+          action: 'Automated testing not detected. Add standard Drupal GitLab CI templates to .gitlab-ci.yml on git.drupalcode.org (+6 pts).'
         });
       }
-    } else {
-      // D11 active era
-      if (!hasD11 && !hasD12) {
-        if (hasD10) {
-          recommendations.push({
-            topic: 'Drupal 10 EOL',
-            action: 'Drupal 10 reaches End-of-Life in November 2026. This module lacks Drupal 11+ compatibility. Update core_version_requirement to ^10 || ^11 and test against D11 to prevent site upgrade blockers (+12 pts).'
-          });
-        } else {
-          recommendations.push({
-            topic: 'Drupal 11',
-            action: 'Missing modern Drupal support. Update core_version_requirement to ^10 || ^11 in .info.yml and test against D11 core (+18 pts).'
-          });
-        }
-      }
-      // Never recommend adding legacy Drupal 10 if D11 or D12 is already supported
-      if (!hasD11 && !hasD12 && !hasModernPhp) {
+      if (!effectiveData.hasAutomatedTests) {
         recommendations.push({
-          topic: 'PHP 8.3+',
-          action: 'Ensure codebase is tested against PHP 8.3 and PHP 8.4 runtimes (Drupal 11 baseline) to prevent runtime deprecation warnings (+2 pts).'
+          topic: 'Test Suite',
+          action: 'No automated tests found. Adding PHPUnit kernel/functional tests will improve code quality and prevent regressions (+3 pts).'
         });
       }
-    }
 
-    // 4. Code Quality & CI Recommendations
-    if (pipelineStatus === 'failed') {
-      recommendations.push({
-        topic: 'GitLab CI',
-        action: 'Automated GitLab CI pipeline is failing on git.drupalcode.org. Inspect pipeline build logs and resolve test failures (+10 pts).'
-      });
-    } else if (pipelineStatus === 'unknown') {
-      recommendations.push({
-        topic: 'GitLab CI',
-        action: 'Automated testing not detected. Add standard Drupal GitLab CI templates to .gitlab-ci.yml on git.drupalcode.org (+6 pts).'
-      });
-    }
-    if (!effectiveData.hasAutomatedTests) {
-      recommendations.push({
-        topic: 'Test Suite',
-        action: 'No automated tests found. Adding PHPUnit kernel/functional tests will improve code quality and prevent regressions (+3 pts).'
-      });
-    }
-
-    // 5. Positive Reinforcement when in exceptional health
-    if (recommendations.length === 0) {
-      recommendations.push({
-        topic: 'Exceptional Health',
-        action: 'All objective health pillars are in excellent standing. Maintain regular release cadence and green GitLab CI status.'
-      });
+      // 5. Positive Reinforcement when in exceptional health
+      if (recommendations.length === 0) {
+        recommendations.push({
+          topic: 'Exceptional Health',
+          action: 'All objective health pillars are in excellent standing. Maintain regular release cadence and green GitLab CI status.'
+        });
+      }
     }
 
     return {
       score: totalScore,
       gradeLabel,
       gradeColor,
+      isDisqualified,
+      disqualificationReason,
+      disclaimer,
       activeVersion: effectiveData.activeVersion,
       isEmergingProject: effectiveData.isEmergingProject,
       pillars: {
         security: {
-          score: securityScore,
+          score: isDisqualified ? 0 : securityScore,
           max: 25,
           label: 'Security & Trust',
           breakdown: securityBreakdown
         },
         maintenance: {
-          score: maintenanceScore,
+          score: isDisqualified ? 0 : maintenanceScore,
           max: 25,
           label: 'Maintenance & Velocity',
           breakdown: maintenanceBreakdown
         },
         modernity: {
-          score: modernityScore,
+          score: isDisqualified ? 0 : modernityScore,
           max: 20,
           label: 'Modernity & Compatibility',
           breakdown: modernityBreakdown
         },
         quality: {
-          score: qualityScore,
+          score: isDisqualified ? 0 : qualityScore,
           max: 15,
           label: 'Code Quality & CI',
           breakdown: qualityBreakdown
         },
         adoption: {
-          score: adoptionScore,
+          score: isDisqualified ? 0 : adoptionScore,
           max: 15,
           label: 'Adoption & Community',
           breakdown: adoptionBreakdown

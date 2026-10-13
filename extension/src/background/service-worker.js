@@ -103,6 +103,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
     return true;
   }
+
+  if (message.type === 'DROPTRENDS_FETCH_PROJECT_NODE') {
+    (async () => {
+      try {
+        const { machineName } = message;
+        if (!machineName) {
+          sendResponse({ node: null });
+          return;
+        }
+
+        const url = `https://www.drupal.org/api-d7/node.json?field_project_machine_name=${encodeURIComponent(machineName)}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' }
+        });
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+          sendResponse({ node: null });
+          return;
+        }
+
+        const data = await res.json();
+        sendResponse({ node: data?.list?.[0] || null });
+      } catch (err) {
+        sendResponse({ node: null, error: err.message });
+      }
+    })();
+    return true;
+  }
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {

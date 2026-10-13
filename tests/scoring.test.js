@@ -123,7 +123,7 @@ describe('DropScore Engine Unit Tests', () => {
     assert.strictEqual(result.isEmergingProject, true);
   });
 
-  it('penalizes unsupported and obsolete modules', () => {
+  it('penalizes unsupported and obsolete modules with 0 score, disqualification, and disclaimer', () => {
     const mockAbandoned = {
       machineName: 'abandoned_mod',
       title: 'Abandoned Module',
@@ -141,8 +141,87 @@ describe('DropScore Engine Unit Tests', () => {
     };
 
     const result = evaluateDropScore(mockAbandoned);
-    assert.ok(result.score <= 35, `Expected score <= 35, got ${result.score}`);
-    assert.strictEqual(result.gradeLabel, 'Needs Attention');
+    assert.strictEqual(result.score, 0, `Expected score 0, got ${result.score}`);
+    assert.strictEqual(result.gradeLabel, 'Obsolete');
+    assert.strictEqual(result.isDisqualified, true);
+    assert.strictEqual(result.disqualificationReason, 'obsolete');
+    assert.ok(result.disclaimer);
+    assert.strictEqual(result.disclaimer.type, 'critical');
+    assert.strictEqual(result.pillars.security.score, 0);
+    assert.strictEqual(result.pillars.maintenance.score, 0);
+    assert.strictEqual(result.pillars.modernity.score, 0);
+  });
+
+  it('disqualifies unsupported modules with score 0 and Unsupported grade label', () => {
+    const mockUnsupported = {
+      machineName: 'unsupported_mod',
+      title: 'Unsupported Module',
+      isSecurityCovered: false,
+      maintenanceStatus: 'Unsupported',
+      developmentStatus: 'Maintenance fixes only',
+      activeInstalls: 500
+    };
+
+    const result = evaluateDropScore(mockUnsupported);
+    assert.strictEqual(result.score, 0);
+    assert.strictEqual(result.gradeLabel, 'Unsupported');
+    assert.strictEqual(result.isDisqualified, true);
+    assert.strictEqual(result.disqualificationReason, 'unsupported');
+    assert.strictEqual(result.disclaimer.type, 'critical');
+  });
+
+  it('disqualifies modules whose security advisory coverage was revoked with score 0', () => {
+    const mockRevoked = {
+      machineName: 'revoked_mod',
+      title: 'Revoked Module',
+      isSecurityRevoked: true,
+      securityCoverageStatus: 'revoked',
+      maintenanceStatus: 'Actively maintained',
+      developmentStatus: 'Under active development'
+    };
+
+    const result = evaluateDropScore(mockRevoked);
+    assert.strictEqual(result.score, 0);
+    assert.strictEqual(result.gradeLabel, 'Security Revoked');
+    assert.strictEqual(result.isDisqualified, true);
+    assert.strictEqual(result.disqualificationReason, 'security_revoked');
+    assert.strictEqual(result.disclaimer.type, 'critical');
+  });
+
+  it('applies disclaimer and reduced status score for minimally maintained modules', () => {
+    const mockMinimal = {
+      machineName: 'minimal_mod',
+      title: 'Minimal Module',
+      isSecurityCovered: true,
+      supportsDrupal11: true,
+      maintenanceStatus: 'Minimally maintained',
+      activeInstalls: 5000,
+      lastReleaseDaysAgo: 45
+    };
+
+    const result = evaluateDropScore(mockMinimal);
+    assert.strictEqual(result.isDisqualified, false);
+    assert.strictEqual(result.pillars.maintenance.breakdown.status, 4);
+    assert.ok(result.disclaimer);
+    assert.strictEqual(result.disclaimer.type, 'warning');
+    assert.strictEqual(result.disclaimer.title, 'Minimally Maintained');
+  });
+
+  it('caps score and sets warning disclaimer for modules with no further development', () => {
+    const mockNoFurther = {
+      machineName: 'legacy_tool',
+      title: 'Legacy Tool',
+      isSecurityCovered: true,
+      supportsDrupal11: true,
+      activeInstalls: 50000, // normally high adoption
+      developmentStatus: 'No further development'
+    };
+
+    const result = evaluateDropScore(mockNoFurther);
+    assert.strictEqual(result.isDisqualified, false);
+    assert.ok(result.score <= 50, `Expected score <= 50, got ${result.score}`);
+    assert.ok(result.disclaimer);
+    assert.strictEqual(result.disclaimer.title, 'No Further Development');
   });
 
   it('automatically infers PHP 8.3+ support from Drupal 11 compatibility', () => {

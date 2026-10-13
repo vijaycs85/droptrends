@@ -96,6 +96,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       d11Tag.textContent = coreText;
       d11Tag.className = coreClass;
 
+      // Render disclaimer if present
+      const disclaimerEl = document.getElementById('dt-popup-disclaimer');
+      if (disclaimerEl) {
+        if (evaluation.disclaimer) {
+          disclaimerEl.classList.remove('dt-hidden');
+          disclaimerEl.className = `dt-popup-disclaimer dt-popup-disclaimer-${evaluation.disclaimer.type}`;
+          disclaimerEl.textContent = `${evaluation.disclaimer.title}: ${evaluation.disclaimer.message}`;
+        } else {
+          disclaimerEl.classList.add('dt-hidden');
+        }
+      }
+
       pillarSec.textContent = `${evaluation.pillars.security.score}/25`;
       pillarMaint.textContent = `${evaluation.pillars.maintenance.score}/25`;
       pillarMod.textContent = `${evaluation.pillars.modernity.score}/20`;

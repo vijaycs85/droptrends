@@ -206,11 +206,28 @@ class DropTrendsUI {
 
           <!-- Drawer Body -->
           <div class="dt-drawer-body">
+            ${evalData.disclaimer ? `
+              <div class="dt-disclaimer dt-disclaimer-${evalData.disclaimer.type}">
+                <div class="dt-disclaimer-icon">
+                  ${evalData.disclaimer.type === 'critical'
+                    ? icons.alertCircle({ size: 16, color: '#dc2626' })
+                    : (evalData.disclaimer.type === 'warning'
+                      ? icons.clock({ size: 16, color: '#d97706' })
+                      : icons.users({ size: 16, color: '#2563eb' }))
+                  }
+                </div>
+                <div class="dt-disclaimer-content">
+                  <span class="dt-disclaimer-title">${this.escapeHTML(evalData.disclaimer.title)}</span>
+                  <span class="dt-disclaimer-text">${this.escapeHTML(evalData.disclaimer.message)}</span>
+                </div>
+              </div>
+            ` : ''}
+
             <!-- 5 Objective Pillars (Unified High-Density Scorecard) -->
             <div class="dt-scorecard">
               <div class="dt-scorecard-header">
                 <span class="dt-scorecard-title">Objective Pillars</span>
-                <span class="dt-scorecard-pts">${evalData.score} / 100 Points</span>
+                <span class="dt-scorecard-pts">${evalData.isDisqualified ? 'Disqualified (0 / 100)' : `${evalData.score} / 100 Points`}</span>
               </div>
               <div class="dt-scorecard-rows">
                 ${this.renderPillarRow(
@@ -1024,6 +1041,50 @@ class DropTrendsUI {
         display: flex;
         flex-direction: column;
         gap: 12px;
+      }
+
+      /* Disclaimer Banner */
+      .dt-disclaimer {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 9px 12px;
+        border-radius: 6px;
+        font-size: 11.5px;
+        line-height: 1.45;
+        flex-shrink: 0;
+      }
+      .dt-disclaimer-critical {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+      }
+      .dt-disclaimer-warning {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        color: #92400e;
+      }
+      .dt-disclaimer-info {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1e40af;
+      }
+      .dt-disclaimer-icon {
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .dt-disclaimer-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .dt-disclaimer-title {
+        font-weight: 700;
+        font-size: 11.5px;
+      }
+      .dt-disclaimer-text {
+        opacity: 0.95;
       }
 
       /* Unified Scorecard Box */

@@ -405,6 +405,76 @@ describe('DOM Extractor Unit Tests', () => {
     assert.strictEqual(compat.supportsD11, true);
     assert.strictEqual(compat.modernPhp, true); // Inherited from D11/D12
   });
+
+  it('accurately extracts Unsupported and Obsolete from modern Drupal.org DOM without label prefixes', () => {
+    const mockDoc = {
+      querySelectorAll(selector) {
+        if (selector.includes('.project-info li')) {
+          return [
+            {
+              textContent: 'Unsupported\nNot supported (i.e. abandoned), and no longer being developed.',
+              querySelector(s) {
+                if (s.includes('triangle-alert')) return { src: '/triangle-alert.svg' };
+                return null;
+              }
+            },
+            {
+              textContent: 'Obsolete\nUse of this project is deprecated.',
+              querySelector(s) {
+                if (s.includes('triangle-alert')) return { src: '/triangle-alert.svg' };
+                return null;
+              }
+            }
+          ];
+        }
+        return [];
+      },
+      querySelector() { return null; }
+    };
+
+    const status = DrupalDomExtractor.extractMaintenanceStatus(mockDoc);
+    assert.strictEqual(status.maintenanceStatus, 'Unsupported');
+    assert.strictEqual(status.developmentStatus, 'Obsolete');
+  });
+
+  it('accurately extracts Minimally maintained and Seeking co-maintainer(s)', () => {
+    const mockDoc = {
+      querySelectorAll(selector) {
+        if (selector.includes('.project-info li')) {
+          return [
+            { textContent: 'Minimally maintained\nOnly critical fixes' },
+            { textContent: 'Seeking co-maintainer(s)\nLooking for helpers' }
+          ];
+        }
+        return [];
+      },
+      querySelector() { return null; }
+    };
+
+    const status = DrupalDomExtractor.extractMaintenanceStatus(mockDoc);
+    assert.strictEqual(status.maintenanceStatus, 'Minimally maintained');
+  });
+
+  it('detects revoked security advisory status when project is marked insecure by security team', () => {
+    const mockDoc = {
+      querySelector(selector) {
+        if (selector === '#content') {
+          return {
+            textContent: 'This project has been marked as insecure by Drupal Security Team. All releases have been unpublished. Disable the module and remove it from your site.'
+          };
+        }
+        return null;
+      },
+      querySelectorAll() {
+        return [];
+      }
+    };
+
+    const secStatus = DrupalDomExtractor.extractSecurityStatus(mockDoc);
+    assert.strictEqual(secStatus.isSecurityRevoked, true);
+    assert.strictEqual(secStatus.securityCoverageStatus, 'revoked');
+    assert.strictEqual(secStatus.isSecurityCovered, false);
+  });
 });
 
 

@@ -142,7 +142,10 @@ class DrupalDomExtractor {
     const recommendedRelease = latestStableRelease || releases[0] || null;
 
     // Security coverage: if project has a covered stable release or general shield icon
-    const isSecurityCovered = this.extractSecurityCoverage(doc, latestStableRelease);
+    const secStatus = this.extractSecurityStatus(doc, latestStableRelease);
+    const isSecurityCovered = secStatus.isSecurityCovered;
+    const isSecurityRevoked = secStatus.isSecurityRevoked;
+    const securityCoverageStatus = secStatus.securityCoverageStatus;
     if (!isSecurityCovered) {
       releases.forEach(r => { r.isSecurityCovered = false; });
     }
@@ -165,6 +168,8 @@ class DrupalDomExtractor {
       isEmergingProject: (projectAge.createdDaysAgo !== null && projectAge.createdDaysAgo <= 90),
       url: (typeof window !== 'undefined' && window.location) ? window.location.href : `https://www.drupal.org/project/${machineName}`,
       isSecurityCovered,
+      isSecurityRevoked,
+      securityCoverageStatus,
       activeInstalls,
       hasStableRelease: Boolean(latestStableRelease),
       latestVersion: recommendedRelease?.version || null,
@@ -267,6 +272,38 @@ class DrupalDomExtractor {
     }
 
     return { createdDate, createdDaysAgo };
+  }
+
+  static extractSecurityStatus(doc, latestStableRelease = null) {
+    const contentText = (doc.querySelector ? (doc.querySelector('#content') || doc.body)?.textContent : (doc.body ? doc.body.textContent : '')) || '';
+    const noteWarnings = doc.querySelectorAll ? doc.querySelectorAll('.note-warning, .messages--warning, .messages.warning, .status-warning') : [];
+    let warningText = '';
+    for (const el of noteWarnings) {
+      warningText += ' ' + (el.textContent || '');
+    }
+    const combinedWarning = `${contentText} ${warningText}`.toLowerCase();
+
+    const isSecurityRevoked = (
+      combinedWarning.includes('marked as insecure by drupal security team') ||
+      combinedWarning.includes('unsupported due to security issue') ||
+      (combinedWarning.includes('open security issue') && (combinedWarning.includes('disable the module') || combinedWarning.includes('insecure'))) ||
+      combinedWarning.includes('security advisory coverage revoked')
+    );
+
+    if (isSecurityRevoked) {
+      return {
+        isSecurityCovered: false,
+        isSecurityRevoked: true,
+        securityCoverageStatus: 'revoked'
+      };
+    }
+
+    const isSecurityCovered = this.extractSecurityCoverage(doc, latestStableRelease);
+    return {
+      isSecurityCovered,
+      isSecurityRevoked: false,
+      securityCoverageStatus: isSecurityCovered ? 'covered' : 'not-covered'
+    };
   }
 
   static extractSecurityCoverage(doc, latestStableRelease = null) {
@@ -540,7 +577,9 @@ class DrupalDomExtractor {
 
     const elements = doc.querySelectorAll('.project-info li, .region-sidebar-second .block, .taxonomy-terms');
     for (const el of elements) {
-      const text = el.textContent;
+      const text = el.textContent || '';
+
+      // 1. Label-based regex match (legacy/standard markup)
       const maintMatch = text.match(/Maintenance status:\s*([^\n\r<]+)/i);
       if (maintMatch && !maintenanceStatus) {
         maintenanceStatus = maintMatch[1].trim();
@@ -549,6 +588,60 @@ class DrupalDomExtractor {
       const devMatch = text.match(/Development status:\s*([^\n\r<]+)/i);
       if (devMatch && !developmentStatus) {
         developmentStatus = devMatch[1].trim();
+      }
+
+      // 2. Direct exact term matching (modern Drupal.org DOM where label prefix is omitted)
+      if (!maintenanceStatus) {
+        if (/\bActively maintained\b/i.test(text)) {
+          maintenanceStatus = 'Actively maintained';
+        } else if (/\bMinimally maintained\b/i.test(text)) {
+          maintenanceStatus = 'Minimally maintained';
+        } else if (/\bSeeking co-maintainer(?:s|\(s\))?\b/i.test(text)) {
+          maintenanceStatus = 'Seeking co-maintainer(s)';
+        } else if (/\bSeeking new maintainer\b/i.test(text)) {
+          maintenanceStatus = 'Seeking new maintainer';
+        } else if (/\bUnsupported\b/i.test(text) && (
+          text.includes('abandoned') ||
+          text.includes('no longer being developed') ||
+          text.includes('dealing with unsupported') ||
+          (el.querySelector && el.querySelector('img[src*="triangle-alert"], img[alt*="caution"]'))
+        )) {
+          maintenanceStatus = 'Unsupported';
+        }
+      }
+
+      if (!developmentStatus) {
+        if (/\bUnder active development\b/i.test(text)) {
+          developmentStatus = 'Under active development';
+        } else if (/\bMaintenance fixes only\b/i.test(text)) {
+          developmentStatus = 'Maintenance fixes only';
+        } else if (/\bNo further development\b/i.test(text)) {
+          developmentStatus = 'No further development';
+        } else if (/\bObsolete\b/i.test(text) && (
+          text.includes('deprecated') ||
+          (el.querySelector && el.querySelector('img[src*="triangle-alert"], img[alt*="caution"]'))
+        )) {
+          developmentStatus = 'Obsolete';
+        }
+      }
+    }
+
+    // Fallback: check whole .project-info container text if li loop didn't catch terms
+    const projectInfo = doc.querySelector ? doc.querySelector('.project-info') : null;
+    if (projectInfo) {
+      const piText = projectInfo.textContent || '';
+      if (!maintenanceStatus) {
+        if (/\bActively maintained\b/i.test(piText)) maintenanceStatus = 'Actively maintained';
+        else if (/\bMinimally maintained\b/i.test(piText)) maintenanceStatus = 'Minimally maintained';
+        else if (/\bSeeking co-maintainer(?:s|\(s\))?\b/i.test(piText)) maintenanceStatus = 'Seeking co-maintainer(s)';
+        else if (/\bSeeking new maintainer\b/i.test(piText)) maintenanceStatus = 'Seeking new maintainer';
+        else if (/\bUnsupported\b/i.test(piText) && (piText.includes('abandoned') || piText.includes('no longer being developed'))) maintenanceStatus = 'Unsupported';
+      }
+      if (!developmentStatus) {
+        if (/\bUnder active development\b/i.test(piText)) developmentStatus = 'Under active development';
+        else if (/\bMaintenance fixes only\b/i.test(piText)) developmentStatus = 'Maintenance fixes only';
+        else if (/\bNo further development\b/i.test(piText)) developmentStatus = 'No further development';
+        else if (/\bObsolete\b/i.test(piText) && piText.includes('deprecated')) developmentStatus = 'Obsolete';
       }
     }
 
