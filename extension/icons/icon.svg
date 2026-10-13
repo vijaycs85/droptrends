@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <!-- Official Drupal Blue to Deep Ocean Gradient -->
+    <linearGradient id="drop-grad-128" x1="15%" y1="0%" x2="85%" y2="100%">
+      <stop offset="0%" stop-color="#009cde" />
+      <stop offset="50%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#0369a1" />
+    </linearGradient>
+    
+    <filter id="drop-shadow-128" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0369a1" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Drupal Water Droplet Contour -->
+  <path d="M 64 6 C 64 6, 12 60, 12 88 C 12 118, 34 128, 64 128 C 94 128, 116 118, 116 88 C 116 60, 64 6, 64 6 Z"
+        fill="url(#drop-grad-128)" filter="url(#drop-shadow-128)" />
+
+  
+  <!-- Specular Curve Sheen -->
+  <path d="M 64 16 C 64 16, 22 64, 22 86 C 22 96, 28 108, 38 114"
+        fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="3.5" stroke-linecap="round" />
+
+  <!-- Ascending Health Metric Bars -->
+  <!-- Bar 1 (Base): Translucent White -->
+  <rect x="32" y="80" width="15" height="28" rx="4" fill="rgba(255,255,255,0.45)" />
+
+  <!-- Bar 2 (Velocity): Crisp White -->
+  <rect x="53" y="64" width="15" height="44" rx="4" fill="rgba(255,255,255,0.88)" />
+
+  <!-- Bar 3 (Top / Passing CI): Vibrant Emerald Green -->
+  <rect x="74" y="48" width="15" height="60" rx="4" fill="#10b981" />
+
+  <!-- Trend Arrow Shaft -->
+  <path d="M 30 78 L 92 38" stroke="#ffffff" stroke-width="7" stroke-linecap="round" />
+
+  <!-- Trend Arrow Head -->
+  <path d="M 72 38 L 92 38 L 92 58" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

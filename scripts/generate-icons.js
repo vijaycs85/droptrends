@@ -1,133 +1,84 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import zlib from 'node:zlib';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const outputDir = path.join(__dirname, '../extension/icons');
-
 fs.mkdirSync(outputDir, { recursive: true });
 
-function crc32(buf) {
-  let table = new Uint32Array(256);
-  for (let i = 0; i < 256; i++) {
-    let c = i;
-    for (let k = 0; k < 8; k++) {
-      c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-    }
-    table[i] = c;
-  }
-  let crc = -1;
-  for (let i = 0; i < buf.length; i++) {
-    crc = (crc >>> 8) ^ table[(crc ^ buf[i]) & 0xFF];
-  }
-  return (crc ^ -1) >>> 0;
+function getSvg(size) {
+  // Size-optimized strokes & geometry for maximum legibility at tiny sizes
+  const isSmall = size <= 32;
+  const strokeWidth = size <= 16 ? 13 : (size <= 32 ? 9 : 7);
+  const barRx = isSmall ? 2 : 4;
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="${size}" height="${size}">
+  <defs>
+    <!-- Official Drupal Blue to Deep Ocean Gradient -->
+    <linearGradient id="drop-grad-${size}" x1="15%" y1="0%" x2="85%" y2="100%">
+      <stop offset="0%" stop-color="#009cde" />
+      <stop offset="50%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#0369a1" />
+    </linearGradient>
+    ${size >= 48 ? `
+    <filter id="drop-shadow-${size}" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0369a1" flood-opacity="0.35" />
+    </filter>` : ''}
+  </defs>
+
+  <!-- Drupal Water Droplet Contour -->
+  <path d="M 64 6 C 64 6, 12 60, 12 88 C 12 118, 34 128, 64 128 C 94 128, 116 118, 116 88 C 116 60, 64 6, 64 6 Z"
+        fill="url(#drop-grad-${size})" ${size >= 48 ? `filter="url(#drop-shadow-${size})"` : ''} />
+
+  ${size >= 48 ? `
+  <!-- Specular Curve Sheen -->
+  <path d="M 64 16 C 64 16, 22 64, 22 86 C 22 96, 28 108, 38 114"
+        fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="3.5" stroke-linecap="round" />` : ''}
+
+  <!-- Ascending Health Metric Bars -->
+  <!-- Bar 1 (Base): Translucent White -->
+  <rect x="32" y="80" width="15" height="28" rx="${barRx}" fill="rgba(255,255,255,0.45)" />
+
+  <!-- Bar 2 (Velocity): Crisp White -->
+  <rect x="53" y="64" width="15" height="44" rx="${barRx}" fill="rgba(255,255,255,0.88)" />
+
+  <!-- Bar 3 (Top / Passing CI): Vibrant Emerald Green -->
+  <rect x="74" y="48" width="15" height="60" rx="${barRx}" fill="#10b981" />
+
+  <!-- Trend Arrow Shaft -->
+  <path d="M 30 78 L 92 38" stroke="#ffffff" stroke-width="${strokeWidth}" stroke-linecap="round" />
+
+  <!-- Trend Arrow Head -->
+  <path d="M 72 38 L 92 38 L 92 58" fill="none" stroke="#ffffff" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" />
+</svg>`;
 }
 
-function createChunk(type, data) {
-  const typeBuf = Buffer.from(type, 'ascii');
-  const lenBuf = Buffer.alloc(4);
-  lenBuf.writeUInt32BE(data.length, 0);
+// Save master 128px SVG
+const masterSvgPath = path.join(outputDir, 'icon.svg');
+fs.writeFileSync(masterSvgPath, getSvg(128));
+console.log(`Saved master SVG to ${masterSvgPath}`);
 
-  const body = Buffer.concat([typeBuf, data]);
-  const crc = crc32(body);
-  const crcBuf = Buffer.alloc(4);
-  crcBuf.writeUInt32BE(crc, 0);
+const chromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const sizes = [512, 128, 48, 32, 16];
 
-  return Buffer.concat([lenBuf, body, crcBuf]);
+for (const s of sizes) {
+  const svgContent = getSvg(s);
+  const tempHtml = path.join(outputDir, `temp-${s}.html`);
+  const targetPng = path.join(outputDir, s === 512 ? 'icon-512.png' : `icon-${s}.png`);
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>* { margin: 0; padding: 0; } html, body { width: ${s}px; height: ${s}px; background: transparent; overflow: hidden; } svg { width: ${s}px; height: ${s}px; display: block; }</style></head><body>${svgContent}</body></html>`;
+  fs.writeFileSync(tempHtml, html);
+
+  execSync(`"${chromePath}" --headless=new --default-background-color=00000000 --screenshot="${targetPng}" --window-size=${s},${s} "${tempHtml}" 2>/dev/null`);
+  console.log(`✓ Rendered native ${targetPng} (${s}x${s} PNG)`);
+
+  if (fs.existsSync(tempHtml)) fs.unlinkSync(tempHtml);
 }
 
-function generateDropTrendsPNG(size) {
-  const width = size;
-  const height = size;
+// Copy 128px icon as store icon
+fs.copyFileSync(path.join(outputDir, 'icon-128.png'), path.join(outputDir, 'store-icon-128.png'));
+console.log('✓ Created store-icon-128.png');
 
-  // Raw image buffer with filter byte 0 per line
-  const rawData = Buffer.alloc((width * 4 + 1) * height);
-
-  const cx = width / 2;
-  const cy = height / 2;
-  const radius = width * 0.46;
-
-  for (let y = 0; y < height; y++) {
-    const rowOffset = y * (width * 4 + 1);
-    rawData[rowOffset] = 0; // Filter byte 0 (None)
-
-    for (let x = 0; x < width; x++) {
-      const pixelOffset = rowOffset + 1 + x * 4;
-
-      const dx = x - cx;
-      const dy = y - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      // Water drop / shield shape
-      // Top point (cx, cy - radius*0.85) to rounded base
-      const nx = dx / (width * 0.44);
-      const ny = (y - (cy - radius * 0.1)) / (height * 0.48);
-
-      // Distance inside a drop-like contour
-      const inDrop = (ny >= -0.8 && ny <= 0.8 && Math.abs(nx) <= (1 - ny * 0.4) * Math.sqrt(Math.max(0, 1 - ny * ny)));
-      const inCircle = dist <= radius;
-
-      if (inCircle) {
-        // Vibrant gradient background (Drupal Blue to Cyan/Emerald)
-        const t = (x + y) / (width + height);
-        // Interpolate #0284c7 (2, 132, 199) to #059669 (5, 150, 105)
-        const r = Math.round(2 + t * 3);
-        const g = Math.round(132 + t * 18);
-        const b = Math.round(199 - t * 94);
-
-        // Anti-aliased border
-        const alpha = Math.min(255, Math.max(0, Math.round((radius - dist + 1) * 255)));
-
-        // Trend upward line inside icon
-        const lineY = cy + (width * 0.25) - ((x - (cx - width * 0.25)) * 0.7);
-        const isTrendLine = (x >= cx - width * 0.28 && x <= cx + width * 0.28 && Math.abs(y - lineY) <= Math.max(1, size * 0.08));
-
-        if (isTrendLine) {
-          rawData[pixelOffset] = 255;
-          rawData[pixelOffset + 1] = 255;
-          rawData[pixelOffset + 2] = 255;
-          rawData[pixelOffset + 3] = alpha;
-        } else {
-          rawData[pixelOffset] = r;
-          rawData[pixelOffset + 1] = g;
-          rawData[pixelOffset + 2] = b;
-          rawData[pixelOffset + 3] = alpha;
-        }
-      } else {
-        // Transparent
-        rawData[pixelOffset] = 0;
-        rawData[pixelOffset + 1] = 0;
-        rawData[pixelOffset + 2] = 0;
-        rawData[pixelOffset + 3] = 0;
-      }
-    }
-  }
-
-  const sig = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
-
-  const ihdrData = Buffer.alloc(13);
-  ihdrData.writeUInt32BE(width, 0);
-  ihdrData.writeUInt32BE(height, 4);
-  ihdrData[8] = 8; // 8-bit depth
-  ihdrData[9] = 6; // Color type 6 (RGBA)
-  ihdrData[10] = 0; // Compression deflate
-  ihdrData[11] = 0; // Filter
-  ihdrData[12] = 0; // Interlace none
-  const ihdr = createChunk('IHDR', ihdrData);
-
-  const compressedData = zlib.deflateSync(rawData);
-  const idat = createChunk('IDAT', compressedData);
-
-  const iend = createChunk('IEND', Buffer.alloc(0));
-
-  return Buffer.concat([sig, ihdr, idat, iend]);
-}
-
-const sizes = [16, 32, 48, 128];
-for (const size of sizes) {
-  const buf = generateDropTrendsPNG(size);
-  const filePath = path.join(outputDir, `icon-${size}.png`);
-  fs.writeFileSync(filePath, buf);
-  console.log(`Generated ${filePath} (${size}x${size})`);
-}
+console.log('Size-optimized Option B icons generation complete!');
