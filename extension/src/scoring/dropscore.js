@@ -25,7 +25,9 @@ class DropScoreEngine {
       isSecurityCovered: (activeRelease?.isSecurityCovered !== undefined) ? activeRelease.isSecurityCovered : data.isSecurityCovered,
       supportsDrupal11: (activeRelease?.supportsD11 !== undefined) ? (activeRelease.supportsD11 || data.supportsDrupal11) : data.supportsDrupal11,
       supportsDrupal10: (activeRelease?.supportsD10 !== undefined) ? (activeRelease.supportsD10 || data.supportsDrupal10) : data.supportsDrupal10,
-      modernPhpSupported: (activeRelease?.modernPhp !== undefined) ? (activeRelease.modernPhp || data.modernPhpSupported) : data.modernPhpSupported,
+      modernPhpSupported: (activeRelease?.modernPhp !== undefined)
+        ? (activeRelease.modernPhp || Boolean(activeRelease.supportsD11) || data.modernPhpSupported)
+        : (Boolean(data.supportsDrupal11) || data.modernPhpSupported),
       lastReleaseDaysAgo: (activeRelease?.daysAgo !== undefined && activeRelease.daysAgo !== null) ? activeRelease.daysAgo : data.lastReleaseDaysAgo,
       activeVersion: activeRelease?.version || data.latestVersion || 'Latest'
     };
@@ -120,7 +122,8 @@ class DropScoreEngine {
     // 3. Pillar: Modernity & Compatibility (20 pts)
     const d11Points = effectiveData.supportsDrupal11 ? 12 : 0;
     const d10Points = effectiveData.supportsDrupal10 ? 6 : 0;
-    const phpPoints = effectiveData.modernPhpSupported ? 2 : 0;
+    // Drupal 11 has a minimum requirement of PHP 8.3; D11 support guarantees PHP 8.3+
+    const phpPoints = (effectiveData.supportsDrupal11 || effectiveData.modernPhpSupported) ? 2 : 0;
 
     const modernityBreakdown = {
       drupal11: d11Points,
@@ -310,17 +313,106 @@ class DropScoreEngine {
     }
 
     const recommendations = [];
+
+    // 1. Security & Trust Recommendations
     if (!effectiveData.isSecurityCovered) {
-      recommendations.push('Review code security independently; releases are not covered by the Drupal Security Advisory policy.');
+      recommendations.push({
+        topic: 'Security Advisory',
+        action: 'Releases are not covered by the Drupal Security Advisory policy. Maintainers can opt in via Drupal.org project settings (+16 pts); site builders should perform manual security audits.'
+      });
     }
-    if (!effectiveData.supportsDrupal11) {
-      recommendations.push('Check the issue queue for Drupal 11 compatibility patches before planning major upgrades.');
+    if (maintainers === 1 && !effectiveData.isEmergingProject) {
+      recommendations.push({
+        topic: 'Bus Factor',
+        action: 'Single maintainer identified. Onboard active contributors as co-maintainers on Drupal.org to safeguard continuity (+3 pts).'
+      });
     }
-    if (maintainers === 1) {
-      recommendations.push('Single maintainer identified. Consider contributing or sponsoring to reduce bus factor.');
+    const sponsors = effectiveData.sponsorsCount || 0;
+    if (sponsors === 0 && installs >= 1000) {
+      recommendations.push({
+        topic: 'Sponsorship',
+        action: 'No supporting organizations listed. Sponsoring organizations can link their Drupal.org profile to improve trust signals (+4 pts).'
+      });
+    }
+
+    // 2. Maintenance & Velocity Recommendations
+    if (daysAgo !== null && daysAgo > 180) {
+      const months = Math.floor(daysAgo / 30);
+      recommendations.push({
+        topic: 'Release Cadence',
+        action: `Latest stable release (${effectiveData.activeVersion}) is over ${months} months old. Tagging a new release from the dev branch will ship accumulated bugfixes and recover up to +5 velocity points.`
+      });
+    }
+    if (maintStatus.includes('seeking co-maintainer')) {
+      recommendations.push({
+        topic: 'Co-maintainer',
+        action: 'Maintainers are actively seeking assistance. Community developers can apply in the Drupal.org issue queue.'
+      });
+    }
+    if (isUnsupported) {
+      recommendations.push({
+        topic: 'Unsupported Project',
+        action: 'Maintainers marked this project as unsupported or obsolete. Adopt this module via Drupal\'s project ownership process or migrate to an active alternative.'
+      });
     }
     if (rtbc >= 5) {
-      recommendations.push(`${rtbc} community-reviewed (RTBC) patches waiting in the queue; high community velocity.`);
+      recommendations.push({
+        topic: 'Queue Velocity',
+        action: `${rtbc} community-reviewed (RTBC) patches are waiting in the queue. Review and commit them to clear the backlog.`
+      });
+    }
+    if (totalIssues > 10 && openBugs / totalIssues > 0.5) {
+      recommendations.push({
+        topic: 'Issue Triage',
+        action: 'Over 50% of open issues are bug reports. Prioritize triaging bug reports and merging available community fixes.'
+      });
+    }
+
+    // 3. Modernity & Compatibility Recommendations
+    if (!effectiveData.supportsDrupal11) {
+      recommendations.push({
+        topic: 'Drupal 11',
+        action: 'Missing Drupal 11 support. Update core_version_requirement to ^10 || ^11 in .info.yml and test against D11 core (+12 pts).'
+      });
+    }
+    if (!effectiveData.supportsDrupal10) {
+      recommendations.push({
+        topic: 'Drupal 10',
+        action: 'Missing Drupal 10 support. Run mglaman/drupal-check or Upgrade Status to fix deprecated APIs (+6 pts).'
+      });
+    }
+    if (!effectiveData.supportsDrupal11 && !effectiveData.modernPhpSupported) {
+      recommendations.push({
+        topic: 'PHP 8.3+',
+        action: 'Ensure codebase is tested against PHP 8.3 and PHP 8.4 runtimes (Drupal 11 baseline) to prevent runtime deprecation warnings (+2 pts).'
+      });
+    }
+
+    // 4. Code Quality & CI Recommendations
+    if (pipelineStatus === 'failed') {
+      recommendations.push({
+        topic: 'GitLab CI',
+        action: 'Automated GitLab CI pipeline is failing on git.drupalcode.org. Inspect pipeline build logs and resolve test failures (+10 pts).'
+      });
+    } else if (pipelineStatus === 'unknown') {
+      recommendations.push({
+        topic: 'GitLab CI',
+        action: 'Automated testing not detected. Add standard Drupal GitLab CI templates to .gitlab-ci.yml on git.drupalcode.org (+6 pts).'
+      });
+    }
+    if (!effectiveData.hasAutomatedTests) {
+      recommendations.push({
+        topic: 'Test Suite',
+        action: 'No automated tests found. Adding PHPUnit kernel/functional tests will improve code quality and prevent regressions (+3 pts).'
+      });
+    }
+
+    // 5. Positive Reinforcement when in exceptional health
+    if (recommendations.length === 0) {
+      recommendations.push({
+        topic: 'Exceptional Health',
+        action: 'All objective health pillars are in excellent standing. Maintain regular release cadence and green GitLab CI status.'
+      });
     }
 
     return {

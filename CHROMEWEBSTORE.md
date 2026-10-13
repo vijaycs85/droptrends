@@ -22,7 +22,7 @@ Stop guessing whether a contributed module is maintained, secure, or ready for D
 
 • Security & Trust (25 pts): View Drupal Security Advisory coverage (shield verification) and maintainer track records at a glance.
 • Maintenance & Velocity (25 pts): Track release recency, commit momentum, maintenance status tags, and issue queue activity so you avoid abandoned projects.
-• Modernity & Compatibility (20 pts): Instantly identify Drupal 11 and Drupal 10 readiness, recipe compatibility, and modern PHP 8.2+ support.
+• Modernity & Compatibility (20 pts): Instantly identify Drupal 11 and Drupal 10 readiness, recipe compatibility, and modern PHP 8.3+ support.
 • Code Quality & CI (15 pts): See automated GitLab CI test pipeline status and test suite passing signals directly under each release.
 • Adoption & Community (15 pts): Evaluate real-world adoption through active site installs, contributor breadth, and supporting organizations.
 

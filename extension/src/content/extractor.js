@@ -421,7 +421,8 @@ class DrupalDomExtractor {
 
       if (/\bdrupal11\b|\bdrupal-11\b|\bDrupal 11\b|\^11\b/.test(rowText)) supportsD11 = true;
       if (/\bdrupal10\b|\bdrupal-10\b|\bDrupal 10\b|\^10\b/.test(rowText)) supportsD10 = true;
-      if (/PHP\s*8\.[2-9]/.test(rowText)) modernPhp = true;
+      // Drupal 11 has a minimum requirement of PHP 8.3; D11 support guarantees PHP 8.3+
+      if (supportsD11 || /PHP\s*8\.[3-9]/i.test(rowText)) modernPhp = true;
       if (/recipe|drupal cms/i.test(rowText)) recipeReady = true;
 
       const pipelineEl = el.querySelector('p.pipeline-result');
@@ -508,7 +509,8 @@ class DrupalDomExtractor {
       supportsD10 = true;
       strings.push('Drupal 10');
     }
-    if (/PHP\s*8\.[2-9]|PHP\s*8\.5/.test(pageText)) {
+    // Drupal 11 requires PHP 8.3 minimum; if D11 is supported, PHP 8.3+ is inherently supported
+    if (supportsD11 || /PHP\s*8\.[3-9]/i.test(pageText)) {
       modernPhp = true;
     }
     if (/recipe|Recipe|Drupal CMS|Site template/i.test(pageText)) {

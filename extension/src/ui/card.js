@@ -226,7 +226,7 @@ class DropTrendsUI {
                   'Modernity & Compatibility',
                   evalData.pillars.modernity.score,
                   20,
-                  `Drupal 11: ${evalData.pillars.modernity.breakdown.drupal11}/12 · Drupal 10: ${evalData.pillars.modernity.breakdown.drupal10}/6 · PHP 8.2+: ${evalData.pillars.modernity.breakdown.modernPhp}/2`
+                  `Drupal 11: ${evalData.pillars.modernity.breakdown.drupal11}/12 · Drupal 10: ${evalData.pillars.modernity.breakdown.drupal10}/6 · PHP 8.3+: ${evalData.pillars.modernity.breakdown.modernPhp}/2`
                 )}
                 ${this.renderPillarRow(
                   icons.flask({ size: 14, color: '#0891b2' }),
@@ -276,12 +276,21 @@ class DropTrendsUI {
               </div>
             </div>
 
-            <!-- Architect Recommendations -->
-            ${evalData.recommendations.length > 0 ? `
+            <!-- Recommendations & Guidance to Improve Score -->
+            ${evalData.recommendations && evalData.recommendations.length > 0 ? `
               <div class="dt-section">
-                <span class="dt-section-label">Architect Guidance</span>
+                <span class="dt-section-label">Recommendations & How to Improve</span>
                 <ul class="dt-guidance-list">
-                  ${evalData.recommendations.map(r => `<li>${this.escapeHTML(r)}</li>`).join('')}
+                  ${evalData.recommendations.map(r => {
+                    const topic = r.topic || '';
+                    const text = r.action || (typeof r === 'string' ? r : '');
+                    return `
+                      <li class="dt-guidance-item">
+                        ${topic ? `<span class="dt-guidance-badge">${this.escapeHTML(topic)}</span>` : ''}
+                        <span class="dt-guidance-text">${this.escapeHTML(text)}</span>
+                      </li>
+                    `;
+                  }).join('')}
                 </ul>
               </div>
             ` : ''}
@@ -1059,13 +1068,42 @@ class DropTrendsUI {
         white-space: nowrap;
       }
 
-      /* Guidance List */
+      /* Recommendations & Guidance List */
       .dt-guidance-list {
         margin: 0;
-        padding-left: 16px;
-        font-size: 11.5px;
-        color: #334155;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .dt-guidance-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 11px;
         line-height: 1.45;
+        color: #334155;
+      }
+      .dt-guidance-badge {
+        display: inline-block;
+        background: #e0f2fe;
+        color: #0369a1;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 4px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        line-height: 1.3;
+      }
+      .dt-guidance-text {
+        color: #475569;
+        flex: 1;
       }
 
       /* Drawer Footer */
