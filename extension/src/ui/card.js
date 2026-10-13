@@ -198,13 +198,21 @@ class DropTrendsUI {
                   15,
                   `GitLab CI: ${evalData.pillars.quality.breakdown.pipeline}/10 (${rawData.gitlabPipelineStatus || 'unknown'}) · Tests: ${evalData.pillars.quality.breakdown.tests}/5`
                 )}
-                ${this.renderPillarRow(
-                  icons.users({ size: 14, color: '#4f46e5' }),
-                  'Adoption & Community',
-                  evalData.pillars.adoption.score,
-                  15,
-                  `Installs: ${evalData.pillars.adoption.breakdown.installs}/10 · Maintainers: ${evalData.pillars.adoption.breakdown.contributors}/5`
-                )}
+                ${(() => {
+                  const installCount = rawData.activeInstalls || 0;
+                  const installLabel = installCount > 0
+                    ? `${installCount.toLocaleString()} sites`
+                    : (evalData.isEmergingProject ? 'Emerging grace' : '0 sites');
+                  const maintCount = rawData.maintainersCount || 1;
+                  const maintLabel = `${maintCount} maintainer${maintCount > 1 ? 's' : ''}`;
+                  return this.renderPillarRow(
+                    icons.users({ size: 14, color: '#4f46e5' }),
+                    'Adoption & Community',
+                    evalData.pillars.adoption.score,
+                    15,
+                    `Installs: ${installLabel} (${evalData.pillars.adoption.breakdown.installs}/10) · ${maintLabel} (${evalData.pillars.adoption.breakdown.contributors}/5)`
+                  );
+                })()}
               </div>
             </div>
 
@@ -536,6 +544,7 @@ class DropTrendsUI {
         border-bottom: 1px solid #e2e8f0;
         background: #f8fafc;
         gap: 12px;
+        flex-shrink: 0;
       }
       .dt-drawer-identity {
         flex: 1;
@@ -653,6 +662,7 @@ class DropTrendsUI {
         padding: 8px 16px;
         background: #f8fafc;
         border-bottom: 1px solid #e2e8f0;
+        flex-shrink: 0;
       }
       .dt-release-row {
         display: flex;
@@ -812,6 +822,7 @@ class DropTrendsUI {
         border-radius: 8px;
         overflow: hidden;
         box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        flex-shrink: 0;
       }
       .dt-scorecard-header {
         display: flex;
@@ -844,6 +855,7 @@ class DropTrendsUI {
         padding: 6px 12px;
         border-bottom: 1px solid #f1f5f9;
         gap: 10px;
+        flex-shrink: 0;
       }
       .dt-scorecard-row:last-child {
         border-bottom: none;
@@ -912,6 +924,7 @@ class DropTrendsUI {
         display: flex;
         flex-direction: column;
         gap: 6px;
+        flex-shrink: 0;
       }
       .dt-section-label {
         font-size: 11px;
@@ -976,6 +989,7 @@ class DropTrendsUI {
         align-items: center;
         font-size: 11px;
         color: #94a3b8;
+        flex-shrink: 0;
       }
       .dt-repo-link {
         color: #0284c7;
