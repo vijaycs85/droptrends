@@ -41,6 +41,7 @@
         "src/scoring/dropscore.js",
         "src/content/extractor.js",
         "src/content/enricher.js",
+        "src/ui/icons.js",
         "src/ui/card.js",
         "src/content/content.js"
       ],

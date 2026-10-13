@@ -36,7 +36,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const isDrupalProject = currentTab?.url && currentTab.url.includes('drupal.org/project/');
 
   if (isDrupalProject) {
-    // Read cached module data from storage
     const storage = await chrome.storage.local.get(['lastViewedModule', 'recentModules']);
     const current = storage.lastViewedModule;
 
@@ -52,10 +51,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       scoreGrade.textContent = evaluation.grade;
       scorePill.style.backgroundColor = evaluation.gradeColor;
 
-      secTag.textContent = rawData.isSecurityCovered ? '🛡️ Security Covered' : '⚠️ No Shield';
+      secTag.textContent = rawData.isSecurityCovered ? 'Security Covered' : 'No Shield';
       secTag.className = rawData.isSecurityCovered ? 'dt-tag dt-tag-sec' : 'dt-tag dt-tag-warn';
 
-      d11Tag.textContent = rawData.supportsDrupal11 ? '🚀 D11 Ready' : (rawData.supportsDrupal10 ? 'D10 Ready' : 'Legacy');
+      d11Tag.textContent = rawData.supportsDrupal11 ? 'D11 Ready' : (rawData.supportsDrupal10 ? 'D10 Ready' : 'Legacy');
 
       pillarSec.textContent = `${evaluation.pillars.security.score}/25`;
       pillarMaint.textContent = `${evaluation.pillars.maintenance.score}/25`;
@@ -70,7 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Not on a module page or no data cached: Show Search View
+  // Not on a module page: Show Search View
   activeView.classList.add('dt-hidden');
   searchView.classList.remove('dt-hidden');
 
