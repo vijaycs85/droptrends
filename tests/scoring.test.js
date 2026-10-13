@@ -429,4 +429,54 @@ describe('DropScore Engine Unit Tests', () => {
       DropScoreEngine.resetCoreSchedule();
     }
   });
+
+  it('calibrates maintainer count scoring accurately (1 maint -> 1 pt, 2 maint -> 3 pts, 3+ maint -> 5 pts)', () => {
+    const baseModule = {
+      machineName: 'test_maint',
+      title: 'Test Maintainers',
+      isSecurityCovered: true,
+      activeInstalls: 500,
+      supportsDrupal11: true
+    };
+
+    assert.strictEqual(evaluateDropScore({ ...baseModule, maintainersCount: 0 }).pillars.adoption.breakdown.contributors, 0);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, maintainersCount: 1 }).pillars.adoption.breakdown.contributors, 1);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, maintainersCount: 2 }).pillars.adoption.breakdown.contributors, 3);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, maintainersCount: 3 }).pillars.adoption.breakdown.contributors, 5);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, maintainersCount: 10 }).pillars.adoption.breakdown.contributors, 5);
+  });
+
+  it('calibrates usage scoring ladder accurately across all install tiers', () => {
+    const baseModule = {
+      machineName: 'test_usage',
+      title: 'Test Usage',
+      isSecurityCovered: true,
+      maintainersCount: 2,
+      supportsDrupal11: true
+    };
+
+    // 0 installs (non-emerging) -> 0 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 0 }).pillars.adoption.breakdown.installs, 0);
+    // 1 - usage -> 2 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 1 }).pillars.adoption.breakdown.installs, 2);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 9 }).pillars.adoption.breakdown.installs, 2);
+    // over 10 -> 4 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 10 }).pillars.adoption.breakdown.installs, 4);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 45 }).pillars.adoption.breakdown.installs, 4);
+    // over 50 -> 6 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 50 }).pillars.adoption.breakdown.installs, 6);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 80 }).pillars.adoption.breakdown.installs, 6);
+    // over 100 -> 7 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 100 }).pillars.adoption.breakdown.installs, 7);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 433 }).pillars.adoption.breakdown.installs, 7);
+    // over 1000 -> 8 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 1000 }).pillars.adoption.breakdown.installs, 8);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 5000 }).pillars.adoption.breakdown.installs, 8);
+    // over 10000 -> 9 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 10000 }).pillars.adoption.breakdown.installs, 9);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 15000 }).pillars.adoption.breakdown.installs, 9);
+    // over 20,000 -> 10 points
+    assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 20000 }).pillars.adoption.breakdown.installs, 10);
+    assert.strictEqual(evaluateDropScore({ ...baseModule, activeInstalls: 100000 }).pillars.adoption.breakdown.installs, 10);
+  });
 });

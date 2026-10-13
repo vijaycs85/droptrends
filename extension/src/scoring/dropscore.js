@@ -330,23 +330,24 @@ class DropScoreEngine {
     let qualityScore = Math.max(0, Math.min(15, pipelinePoints + testPoints));
 
     // 5. Pillar: Adoption & Community (15 pts)
-    let installPoints = 1;
+    let installPoints = 0;
     const installs = effectiveData.activeInstalls || 0;
-    if (installs >= 100000) installPoints = 10;
-    else if (installs >= 20000) installPoints = 8;
-    else if (installs >= 5000) installPoints = 6;
-    else if (installs >= 1000) installPoints = 4;
-    else if (installs >= 200) installPoints = 2;
+    if (installs >= 20000) installPoints = 10;
+    else if (installs >= 10000) installPoints = 9;
+    else if (installs >= 1000) installPoints = 8;
+    else if (installs >= 100) installPoints = 7;
+    else if (installs >= 50) installPoints = 6;
+    else if (installs >= 10) installPoints = 4;
+    else if (installs >= 1) installPoints = 2;
     else {
-      installPoints = 1;
+      installPoints = effectiveData.isEmergingProject ? 2 : 0;
     }
 
-    let contribPoints = 1;
+    let contribPoints = 0;
     const maintainers = effectiveData.maintainersCount || 0;
-    if (maintainers >= 5) contribPoints = 5;
-    else if (maintainers >= 3) contribPoints = 4;
-    else if (maintainers >= 2) contribPoints = 3;
-    else if (maintainers >= 1) contribPoints = 2;
+    if (maintainers >= 3) contribPoints = 5;
+    else if (maintainers === 2) contribPoints = 3;
+    else if (maintainers === 1) contribPoints = 1;
     else contribPoints = 0;
 
     const adoptionBreakdown = {
