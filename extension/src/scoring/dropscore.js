@@ -54,8 +54,8 @@ class DropScoreEngine {
       statusPoints = 2;
     } else if (maintStatus.includes('unsupported') || devStatus.includes('obsolete') || devStatus.includes('no further')) {
       statusPoints = 0;
-    } else if (effectiveData.isEmergingProject) {
-      statusPoints = 9;
+    } else {
+      statusPoints = 6; // Neutral default when status is unstated
     }
 
     let recencyPoints = 0;
@@ -68,7 +68,7 @@ class DropScoreEngine {
       else if (daysAgo <= 730) recencyPoints = 1;
       else recencyPoints = 0;
     } else {
-      recencyPoints = effectiveData.isEmergingProject ? 7 : 3;
+      recencyPoints = 3;
     }
 
     let issuePoints = 3;
@@ -87,8 +87,8 @@ class DropScoreEngine {
       else if (bugRatio <= 0.50) bugRatioPoints = 3;
       else if (bugRatio <= 0.75) bugRatioPoints = 2;
       else bugRatioPoints = 1;
-    } else if (effectiveData.isEmergingProject) {
-      bugRatioPoints = 4;
+    } else {
+      bugRatioPoints = 3;
     }
     issuePoints = Math.min(7, rtbcPoints + bugRatioPoints);
 
@@ -142,7 +142,7 @@ class DropScoreEngine {
     else if (installs >= 1000) installPoints = 4;
     else if (installs >= 200) installPoints = 2;
     else {
-      installPoints = effectiveData.isEmergingProject ? 5 : 1;
+      installPoints = 1;
     }
 
     let contribPoints = 1;
@@ -171,10 +171,14 @@ class DropScoreEngine {
     const totalScore = Math.max(0, Math.min(100, Math.round(rawScore)));
 
     // Modern Benchmarking Labels (No academic school letter grades A/B/C/D)
+    // Brand-new projects (<90 days) are explicitly labeled "Emerging"
     let gradeLabel = 'Needs Attention';
     let gradeColor = '#dc2626'; // Crimson
 
-    if (totalScore >= 90) {
+    if (effectiveData.isEmergingProject && totalScore >= 45) {
+      gradeLabel = 'Emerging';
+      gradeColor = '#d97706'; // Amber / Bronze
+    } else if (totalScore >= 90) {
       gradeLabel = 'Exceptional';
       gradeColor = '#059669'; // Emerald
     } else if (totalScore >= 75) {
@@ -184,7 +188,7 @@ class DropScoreEngine {
       gradeLabel = 'Stable';
       gradeColor = '#2563eb'; // Royal Blue
     } else if (totalScore >= 45) {
-      gradeLabel = effectiveData.isEmergingProject ? 'Emerging' : 'Maturing';
+      gradeLabel = 'Maturing';
       gradeColor = '#d97706'; // Amber / Bronze
     }
 

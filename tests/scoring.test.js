@@ -87,7 +87,7 @@ describe('DropScore Engine Unit Tests', () => {
     assert.ok(hasSecurityFlag);
   });
 
-  it('calibrates emerging projects (like Nightingale site template) fairly', () => {
+  it('calibrates emerging projects (like Nightingale site template) fairly with Emerging label', () => {
     const mockNightingale = {
       machineName: 'nightingale',
       title: 'Nightingale',
@@ -95,17 +95,15 @@ describe('DropScore Engine Unit Tests', () => {
       createdDaysAgo: 12,
       isEmergingProject: true,
       isSecurityCovered: true,
-      activeInstalls: 5,
+      activeInstalls: 0,
       lastReleaseDaysAgo: 3,
       latestVersion: '1.0.1',
       supportsDrupal11: true,
-      supportsDrupal10: true,
+      supportsDrupal10: false,
       modernPhpSupported: true,
       isRecipeReady: true,
       maintainersCount: 1,
       sponsorsCount: 2,
-      gitlabPipelineStatus: 'passed',
-      hasAutomatedTests: true,
       releases: [
         {
           version: '1.0.1',
@@ -120,8 +118,8 @@ describe('DropScore Engine Unit Tests', () => {
 
     const result = evaluateDropScore(mockNightingale);
 
-    assert.ok(result.score >= 70, `Expected emerging project score >= 70, got ${result.score}`);
-    assert.ok(['Exceptional', 'Healthy', 'Stable', 'Emerging'].includes(result.gradeLabel));
+    assert.ok(result.score >= 50 && result.score <= 68, `Expected emerging project score between 50 and 68, got ${result.score}`);
+    assert.strictEqual(result.gradeLabel, 'Emerging');
     assert.strictEqual(result.isEmergingProject, true);
   });
 
