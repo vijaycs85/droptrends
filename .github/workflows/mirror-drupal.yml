@@ -10,6 +10,8 @@ on:
 jobs:
   mirror-to-drupal:
     runs-on: ubuntu-latest
+    env:
+      DRUPAL_SSH_KEY: ${{ secrets.DRUPAL_SSH_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -17,9 +19,7 @@ jobs:
           fetch-depth: 0
 
       - name: Configure SSH for Drupal.org
-        if: ${{ secrets.DRUPAL_SSH_KEY != '' }}
-        env:
-          DRUPAL_SSH_KEY: ${{ secrets.DRUPAL_SSH_KEY }}
+        if: env.DRUPAL_SSH_KEY != ''
         run: |
           mkdir -p ~/.ssh
           printf "%s\n" "$DRUPAL_SSH_KEY" > ~/.ssh/id_rsa
@@ -35,7 +35,7 @@ jobs:
           chmod 600 ~/.ssh/config
 
       - name: Push to Drupal.org repository
-        if: ${{ secrets.DRUPAL_SSH_KEY != '' }}
+        if: env.DRUPAL_SSH_KEY != ''
         run: |
           git remote add drupal git@git.drupal.org:project/droptrends.git || git remote set-url drupal git@git.drupal.org:project/droptrends.git
           git push --tags drupal 1.x
