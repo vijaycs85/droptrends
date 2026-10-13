@@ -1,0 +1,35 @@
+name: Mirror to Drupal.org
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+
+jobs:
+  mirror-to-drupal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure SSH for Drupal.org GitLab
+        if: env.DRUPAL_SSH_KEY != ''
+        env:
+          DRUPAL_SSH_KEY: ${{ secrets.DRUPAL_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DRUPAL_SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan git.drupalcode.org >> ~/.ssh/known_hosts
+
+      - name: Push to Drupal.org repository
+        if: env.DRUPAL_SSH_KEY != ''
+        env:
+          DRUPAL_SSH_KEY: ${{ secrets.DRUPAL_SSH_KEY }}
+        run: |
+          git remote add drupal git@git.drupalcode.org:project/droptrends.git
+          git push --tags drupal main

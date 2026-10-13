@@ -65,12 +65,73 @@
       } catch {}
     }
 
+    // Set up live DOM observer if pipeline status wasn't yet populated by Drupal.org scripts
+    let observer = null;
+    if (rawData.gitlabPipelineStatus === 'unknown') {
+      const pipelineEls = document.querySelectorAll('.pipeline-result, p.pipeline-result');
+      if (pipelineEls.length > 0 && typeof MutationObserver !== 'undefined') {
+        observer = new MutationObserver(() => {
+          for (const el of pipelineEls) {
+            const detectedStatus = DrupalDomExtractor.extractPipelineStatusFromElement(el);
+            if (detectedStatus && detectedStatus !== 'unknown' && detectedStatus !== rawData.gitlabPipelineStatus) {
+              if (observer) observer.disconnect();
+              rawData.gitlabPipelineStatus = detectedStatus;
+              rawData.hasAutomatedTests = (
+                detectedStatus === 'passed' ||
+                detectedStatus === 'running' ||
+                Boolean(rawData.composerCommand)
+              );
+              const updatedEval = DropScoreEngine.evaluate(rawData);
+              requestAnimationFrame(() => {
+                DropTrendsUI.mount(rawData, updatedEval);
+              });
+              if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+                chrome.runtime.sendMessage({
+                  type: 'DROPTRENDS_SCORE_UPDATED',
+                  score: updatedEval.score,
+                  gradeLabel: updatedEval.gradeLabel,
+                  gradeColor: updatedEval.gradeColor,
+                  moduleName: rawData.machineName
+                }).catch(() => {});
+              }
+              break;
+            }
+          }
+        });
+
+        pipelineEls.forEach((el) => {
+          observer.observe(el, { childList: true, subtree: true, attributes: true });
+        });
+
+        // Safeguard timeout to disconnect observer
+        setTimeout(() => {
+          if (observer) observer.disconnect();
+        }, 6000);
+      }
+    }
+
     const enrichedData = await DropTrendsEnricher.enrich(rawData);
+    if (observer && enrichedData.gitlabPipelineStatus !== 'unknown') {
+      observer.disconnect();
+    }
+
     evaluation = DropScoreEngine.evaluate(enrichedData);
 
     requestAnimationFrame(() => {
       DropTrendsUI.mount(enrichedData, evaluation);
     });
+
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      try {
+        await chrome.runtime.sendMessage({
+          type: 'DROPTRENDS_SCORE_UPDATED',
+          score: evaluation.score,
+          gradeLabel: evaluation.gradeLabel,
+          gradeColor: evaluation.gradeColor,
+          moduleName: enrichedData.machineName
+        });
+      } catch {}
+    }
 
     if (typeof chrome !== 'undefined' && chrome.storage?.local) {
       await chrome.storage.local.set({

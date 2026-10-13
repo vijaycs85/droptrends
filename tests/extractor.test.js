@@ -313,5 +313,81 @@ describe('DOM Extractor Unit Tests', () => {
     assert.strictEqual(releases[1].version, '1.0.0');
     assert.strictEqual(releases[1].isSecurityCovered, true, 'Release with shield-icon-black must be security covered');
   });
+
+  it('accurately extracts GitLab CI pipeline status from Drupal.org DOM elements', () => {
+    // 1. Success / Passed element matching Drupal.org live markup
+    const successEl = {
+      innerHTML: 'GitLab CI: <a href="https://git.drupalcode.org/project/entity/-/pipelines/998953" title="Link to success pipeline"><img src="https://git.drupalcode.org/assets/ci_favicons/favicon_status_success.png" alt="Status: success" /></a> <a href="#">view all pipelines</a>',
+      textContent: 'GitLab CI:  view all pipelines',
+      querySelector(sel) {
+        if (sel === 'img') return { getAttribute(a) { return a === 'alt' ? 'Status: success' : (a === 'src' ? '/favicon_status_success.png' : null); } };
+        if (sel === 'a') return { getAttribute(a) { return a === 'title' ? 'Link to success pipeline' : null; } };
+        return null;
+      }
+    };
+    assert.strictEqual(DrupalDomExtractor.extractPipelineStatusFromElement(successEl), 'passed');
+
+    // 2. Failed element
+    const failedEl = {
+      innerHTML: 'GitLab CI: <a href="#" title="Link to failed pipeline"><img src="/favicon_status_failed.png" alt="Status: failed" /></a>',
+      textContent: 'GitLab CI:  view all pipelines',
+      querySelector(sel) {
+        if (sel === 'img') return { getAttribute(a) { return a === 'alt' ? 'Status: failed' : null; } };
+        if (sel === 'a') return { getAttribute(a) { return a === 'title' ? 'Link to failed pipeline' : null; } };
+        return null;
+      }
+    };
+    assert.strictEqual(DrupalDomExtractor.extractPipelineStatusFromElement(failedEl), 'failed');
+
+    // 3. Running element
+    const runningEl = {
+      innerHTML: 'GitLab CI: <img alt="Status: running" />',
+      textContent: 'GitLab CI:',
+      querySelector(sel) {
+        if (sel === 'img') return { getAttribute(a) { return a === 'alt' ? 'Status: running' : null; } };
+        return null;
+      }
+    };
+    assert.strictEqual(DrupalDomExtractor.extractPipelineStatusFromElement(runningEl), 'running');
+
+    // 4. Empty / unpopulated element
+    const emptyEl = {
+      innerHTML: '',
+      textContent: '',
+      querySelector() { return null; }
+    };
+    assert.strictEqual(DrupalDomExtractor.extractPipelineStatusFromElement(emptyEl), null);
+  });
+
+  it('extracts GitLab repository, default branch, and CI status directly in extractGitLabInfo', () => {
+    const mockDoc = {
+      querySelectorAll(sel) {
+        if (sel.includes('pipeline-result')) {
+          return [
+            {
+              dataset: {
+                repo: 'https://git.drupalcode.org/project/entity',
+                version: '8.x-1.x'
+              },
+              innerHTML: '<img src="/favicon_status_success.png" alt="Status: success">',
+              textContent: 'GitLab CI: view all pipelines',
+              querySelector(s) {
+                if (s === 'img') return { getAttribute(a) { return a === 'alt' ? 'Status: success' : null; } };
+                return null;
+              }
+            }
+          ];
+        }
+        return [];
+      },
+      querySelector() { return null; }
+    };
+
+    const gitlabInfo = DrupalDomExtractor.extractGitLabInfo(mockDoc, 'entity', [{ version: '8.x-1.8' }]);
+    assert.strictEqual(gitlabInfo.repoUrl, 'https://git.drupalcode.org/project/entity');
+    assert.strictEqual(gitlabInfo.defaultBranch, '8.x-1.x');
+    assert.strictEqual(gitlabInfo.pipelineStatus, 'passed');
+  });
 });
+
 

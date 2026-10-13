@@ -151,7 +151,7 @@ class DrupalDomExtractor {
     const issues = this.extractIssuesCockpit(doc);
     const maintainers = this.extractMaintainers(doc);
     const sponsors = this.extractSupportingOrganizations(doc);
-    const gitlab = this.extractGitLabInfo(doc, machineName);
+    const gitlab = this.extractGitLabInfo(doc, machineName, releases);
 
     const pageCompatibility = this.extractPageCompatibility(doc);
 
@@ -188,7 +188,13 @@ class DrupalDomExtractor {
       totalIssuesCount: issues.total,
       openBugsCount: issues.openBugs,
       gitlabRepoUrl: gitlab.repoUrl,
-      defaultBranch: gitlab.defaultBranch
+      defaultBranch: gitlab.defaultBranch,
+      gitlabPipelineStatus: gitlab.pipelineStatus,
+      hasAutomatedTests: (
+        gitlab.pipelineStatus === 'passed' ||
+        gitlab.pipelineStatus === 'running' ||
+        Boolean(recommendedRelease?.composerCommand)
+      )
     };
   }
 
@@ -601,14 +607,101 @@ class DrupalDomExtractor {
     };
   }
 
-  static extractGitLabInfo(doc, machineName) {
+  /**
+   * Evaluates GitLab pipeline status from a DOM element (e.g. <p class="pipeline-result">)
+   * Handles Drupal.org's injected markup:
+   * GitLab CI: <a href="..." title="Link to success pipeline"><img src="..." alt="Status: success" /></a>
+   * @param {Element} el - DOM element
+   * @returns {string|null} 'passed', 'failed', 'running', or null
+   */
+  static extractPipelineStatusFromElement(el) {
+    if (!el) return null;
+    const text = el.textContent || '';
+    const html = typeof el.innerHTML === 'string' ? el.innerHTML : '';
+
+    const img = el.querySelector ? el.querySelector('img') : null;
+    const link = el.querySelector ? el.querySelector('a') : null;
+
+    const alt = (img && img.getAttribute) ? (img.getAttribute('alt') || img.alt || '') : '';
+    const title = (link && link.getAttribute) ? (link.getAttribute('title') || link.title || '') :
+                  ((img && img.getAttribute) ? (img.getAttribute('title') || img.title || '') : '');
+    const src = (img && img.getAttribute) ? (img.getAttribute('src') || img.src || '') : '';
+
+    const combined = `${alt} ${title} ${src} ${html} ${text}`.toLowerCase();
+
+    // Check for success / passed indicators
+    if (
+      combined.includes('status: success') ||
+      combined.includes('status: passed') ||
+      combined.includes('status_success') ||
+      combined.includes('link to success') ||
+      combined.includes('link to passed') ||
+      combined.includes('favicon_status_success') ||
+      combined.includes('ci_favicons/favicon_status_success') ||
+      /\b(passed|success)\b/.test(combined)
+    ) {
+      return 'passed';
+    }
+
+    // Check for failed indicators
+    if (
+      combined.includes('status: failed') ||
+      combined.includes('status: canceled') ||
+      combined.includes('status_failed') ||
+      combined.includes('link to failed') ||
+      combined.includes('favicon_status_failed') ||
+      /\b(failed|canceled)\b/.test(combined)
+    ) {
+      return 'failed';
+    }
+
+    // Check for running / pending
+    if (
+      combined.includes('status: running') ||
+      combined.includes('status: pending') ||
+      combined.includes('status_running') ||
+      combined.includes('link to running')
+    ) {
+      return 'running';
+    }
+
+    return null;
+  }
+
+  static extractGitLabInfo(doc, machineName, releases = []) {
     let repoUrl = `https://git.drupalcode.org/project/${machineName}`;
     let defaultBranch = null;
+    let pipelineStatus = 'unknown';
 
-    const pipelineEl = doc.querySelector('p.pipeline-result');
-    if (pipelineEl) {
-      if (pipelineEl.dataset.repo) repoUrl = pipelineEl.dataset.repo;
-      if (pipelineEl.dataset.version) defaultBranch = pipelineEl.dataset.version;
+    const pipelineEls = doc.querySelectorAll('p.pipeline-result, .pipeline-result');
+    for (const el of pipelineEls) {
+      const repo = el.dataset?.repo || (el.getAttribute ? el.getAttribute('data-repo') : null);
+      if (repo) repoUrl = repo;
+
+      const version = el.dataset?.version || (el.getAttribute ? el.getAttribute('data-version') : null);
+      if (!defaultBranch && version) {
+        defaultBranch = version;
+      }
+
+      const status = this.extractPipelineStatusFromElement(el);
+      if (status) {
+        pipelineStatus = status;
+        if (status === 'passed') {
+          break; // Passing pipeline found
+        }
+      }
+    }
+
+    // Fallback: derive branch from highest release (e.g. 8.x-1.8 -> 8.x-1.x, 6.3.1 -> 6.3.x)
+    if (!defaultBranch && Array.isArray(releases) && releases.length > 0) {
+      const topRelease = releases[0];
+      if (topRelease && topRelease.version) {
+        const parts = topRelease.version.split('.');
+        if (parts.length >= 2) {
+          parts[parts.length - 1] = 'x';
+          defaultBranch = parts.join('.');
+        }
+      }
     }
 
     if (!defaultBranch) {
@@ -621,7 +714,8 @@ class DrupalDomExtractor {
 
     return {
       repoUrl,
-      defaultBranch: defaultBranch || '1.0.x'
+      defaultBranch: defaultBranch || '1.0.x',
+      pipelineStatus
     };
   }
 }

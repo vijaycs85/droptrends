@@ -1,0 +1,98 @@
+<p><strong>DropTrends</strong> brings objective, instant health ratings—the <strong>DropScore™ (0–100)</strong>—directly inside Drupal.org module project pages via a lightweight, privacy-first browser extension.</p>
+
+<p>Choosing Drupal modules today often leads to decision paralysis: outdated code, abandoned issue queues, uncertain Drupal 11 readiness, and multiple competing solutions for the same problem. DropTrends solves this by analyzing key health signals in real time and displaying a clear, actionable letter grade (A+ through F) beside the module title.</p>
+
+<hr />
+
+<h2>Features</h2>
+<ul>
+  <li><strong>Instant Health Pill:</strong> An unobtrusive badge injected directly beside the module title displaying the overall score (0–100) and letter grade (A+ to F).</li>
+  <li><strong>Interactive Breakdown Drawer:</strong> Click the badge to slide open a deep dive into module strengths, potential risks, and recommendations.</li>
+  <li><strong>Drupal 11 &amp; 10 Compatibility Checks:</strong> Instantly verify core support, modern PHP 8.2+ compatibility, and recipe readiness.</li>
+  <li><strong>Security Advisory Verification:</strong> Immediate visibility into Drupal Security Advisory policy coverage (the shield icon status) and maintainer track records.</li>
+  <li><strong>GitLab CI &amp; Code Quality:</strong> Real-time test pipeline status and automated test suite coverage without leaving the project page.</li>
+  <li><strong>One-Click Composer Copy:</strong> Quickly copy <code>composer require drupal/module_name</code> right from the drawer.</li>
+  <li><strong>Zero Configuration &amp; Privacy-First:</strong> Runs entirely client-side. Zero tracking, zero telemetry, and zero backend latency.</li>
+</ul>
+
+<hr />
+
+<h2>The DropScore™ Evaluation Matrix (0–100)</h2>
+<p>DropScore calculates an objective score across five weighted pillars:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Pillar</th>
+      <th>Weight</th>
+      <th>Key Signals Evaluated</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>🛡️ Security &amp; Trust</strong></td>
+      <td>25 pts</td>
+      <td>Security advisory coverage (shield status), critical advisory history, maintainer trust.</td>
+    </tr>
+    <tr>
+      <td><strong>⚡ Maintenance &amp; Velocity</strong></td>
+      <td>25 pts</td>
+      <td>Last release recency, commit frequency, project status tags, and issue queue velocity.</td>
+    </tr>
+    <tr>
+      <td><strong>🚀 Modernity &amp; Compatibility</strong></td>
+      <td>20 pts</td>
+      <td>Drupal 11 &amp; Drupal 10 core compatibility, PHP 8.2+ support, recipe readiness.</td>
+    </tr>
+    <tr>
+      <td><strong>🧪 Code Quality &amp; CI</strong></td>
+      <td>15 pts</td>
+      <td>GitLab CI test pass rate, automated test presence (Unit, Kernel, Functional), PHPStan status.</td>
+    </tr>
+    <tr>
+      <td><strong>📈 Adoption &amp; Community</strong></td>
+      <td>15 pts</td>
+      <td>Reported active installations, Packagist download velocity, active contributor breadth.</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2>Installation</h2>
+
+<h3>Option 1: Chrome Web Store / Chromium Browsers</h3>
+<p>Install directly from the official store (Chrome, Brave, Edge, Arc):<br />
+👉 <a href="https://chromewebstore.google.com/detail/YOUR_EXTENSION_ID" rel="nofollow">Install DropTrends on Chrome Web Store</a> <em>(Link pending store approval)</em></p>
+
+<h3>Option 2: Firefox Add-ons</h3>
+<p>Install directly from Mozilla AMO:<br />
+👉 <a href="https://addons.mozilla.org/firefox/addon/droptrends/" rel="nofollow">Install DropTrends on Firefox Add-ons</a> <em>(Coming soon)</em></p>
+
+<h3>Option 3: Developer / Manual Installation</h3>
+<ol>
+  <li>Clone or download the source code from <a href="https://github.com/YOUR_GITHUB_USERNAME/droptrends">GitHub</a>.</li>
+  <li>Open your browser's extension manager (<code>chrome://extensions</code> in Chromium or <code>about:debugging</code> in Firefox).</li>
+  <li>Enable <strong>Developer mode</strong>.</li>
+  <li>Click <strong>Load unpacked</strong> and select the <code>extension</code> directory from this repository.</li>
+</ol>
+
+<hr />
+
+<h2>Privacy &amp; Permissions</h2>
+<p>DropTrends is built with a strict <strong>privacy-first architecture</strong>:</p>
+<ul>
+  <li><strong>No Tracking:</strong> We do not collect, transmit, or monetize any user data, IP addresses, or browsing history.</li>
+  <li><strong>Client-Side Processing:</strong> DropScore is calculated directly in your browser using publicly visible metadata on Drupal.org project pages.</li>
+  <li><strong>Minimal Permissions:</strong> Only requests permission to inject UI badges on <code>drupal.org/project/*</code> and query public GitLab CI badges on <code>git.drupalcode.org</code>.</li>
+</ul>
+
+<hr />
+
+<h2>Development &amp; Contributing</h2>
+<p>DropTrends is 100% open source under the GPL-2.0-or-later / MIT license.</p>
+<ul>
+  <li><strong>GitHub Repository:</strong> <a href="https://github.com/YOUR_GITHUB_USERNAME/droptrends">github.com/YOUR_GITHUB_USERNAME/droptrends</a></li>
+  <li><strong>Bug Reports &amp; Feature Requests:</strong> Please submit issues via the <a href="https://github.com/YOUR_GITHUB_USERNAME/droptrends/issues">GitHub Issue Tracker</a> or the Drupal.org project issue queue.</li>
+  <li><strong>Roadmap:</strong> Phase 2 features include module head-to-head comparisons (similar to npm-trends) and curated category leaderboards.</li>
+</ul>
