@@ -220,29 +220,99 @@ class DropTrendsUI {
                   'Security & Trust',
                   evalData.pillars.security.score,
                   25,
-                  `Advisory: ${evalData.pillars.security.breakdown.coverage}/16 · Maintainers: ${evalData.pillars.security.breakdown.maintainers}/5 · Sponsors: ${evalData.pillars.security.breakdown.sponsors}/4`
+                  [
+                    {
+                      text: `Advisory: ${evalData.pillars.security.breakdown.coverage}/16`,
+                      tooltip: evalData.pillars.security.breakdown.coverage > 0
+                        ? 'Security Advisory Coverage: 16/16 pts (Covered under Drupal Security Advisory policy)'
+                        : 'Security Advisory Coverage: 0/16 pts (No advisory coverage; manual security audit recommended)'
+                    },
+                    {
+                      text: `Maintainers: ${evalData.pillars.security.breakdown.maintainers}/5`,
+                      tooltip: `Maintainer Breadth: ${evalData.pillars.security.breakdown.maintainers}/5 pts (${rawData.maintainersCount || 1} maintainers listed)`
+                    },
+                    {
+                      text: `Sponsors: ${evalData.pillars.security.breakdown.sponsors}/4`,
+                      tooltip: `Organization Sponsorship: ${evalData.pillars.security.breakdown.sponsors}/4 pts (${rawData.sponsorsCount || 0} supporting organizations)`
+                    }
+                  ]
                 )}
                 ${this.renderPillarRow(
                   icons.zap({ size: 14, color: '#d97706' }),
                   'Maintenance & Velocity',
                   evalData.pillars.maintenance.score,
                   25,
-                  `Status: ${evalData.pillars.maintenance.breakdown.statusLabel ? `${evalData.pillars.maintenance.breakdown.statusLabel} ` : ''}(${evalData.pillars.maintenance.breakdown.status}/10) · Recency: ${evalData.pillars.maintenance.breakdown.recency}/8 (${evalData.activeVersion}) · Queue: ${evalData.pillars.maintenance.breakdown.issues}/7`
+                  [
+                    {
+                      text: `Status: ${evalData.pillars.maintenance.breakdown.statusLabel || 'Active'} (${evalData.pillars.maintenance.breakdown.status}/10)`,
+                      tooltip: `Maintenance Status Taxonomy: ${evalData.pillars.maintenance.breakdown.statusLabel || 'Active'} (${evalData.pillars.maintenance.breakdown.status}/10 pts)`
+                    },
+                    {
+                      text: `Recency: ${evalData.pillars.maintenance.breakdown.recency}/8`,
+                      tooltip: `Release Recency: ${evalData.pillars.maintenance.breakdown.recency}/8 pts (Active release ${evalData.activeVersion}${evalData.lastReleaseDaysAgo !== null ? `, published ${evalData.lastReleaseDaysAgo} days ago` : ''})`
+                    },
+                    {
+                      text: `Queue: ${evalData.pillars.maintenance.breakdown.issues}/7`,
+                      tooltip: `Issue Queue Activity: ${evalData.pillars.maintenance.breakdown.issues}/7 pts (${rawData.rtbcCount || 0} RTBC patches, ${rawData.openBugsCount || 0} open bugs / ${rawData.totalIssuesCount || 0} total issues)`
+                    }
+                  ]
                 )}
                 ${this.renderPillarRow(
                   icons.rocket({ size: 14, color: '#2563eb' }),
                   'Modernity & Compatibility',
                   evalData.pillars.modernity.score,
                   20,
-                  evalData.pillars.modernity.breakdown.summaryText ||
-                  `Drupal 11: ${evalData.pillars.modernity.breakdown.drupal11}/12 · Drupal 10 (EOL Nov '26): ${evalData.pillars.modernity.breakdown.drupal10}/6 · ${evalData.pillars.modernity.breakdown.phpLabel || 'PHP 8.3+'}: ${evalData.pillars.modernity.breakdown.modernPhp}/2`
+                  (() => {
+                    const modItems = [];
+                    const b = evalData.pillars.modernity.breakdown;
+                    if (b.drupal12 > 0) {
+                      modItems.push({
+                        text: `Drupal 12: ${b.drupal12}/12`,
+                        tooltip: 'Drupal 12: 12/12 pts (Forward-compatible with upcoming Drupal 12 core)'
+                      });
+                    }
+                    if (b.drupal11 > 0) {
+                      const maxD11 = b.drupal10 > 0 ? 12 : (b.corePoints || 18);
+                      modItems.push({
+                        text: `Drupal 11: ${b.drupal11}/${maxD11}`,
+                        tooltip: `Drupal 11: ${b.drupal11}/${maxD11} pts (Compatible with current Drupal 11 core)`
+                      });
+                    } else if (!b.drupal12) {
+                      modItems.push({
+                        text: 'Drupal 11: 0/12',
+                        tooltip: 'Drupal 11: 0/12 pts (Lacks Drupal 11 core compatibility)'
+                      });
+                    }
+                    if (b.drupal10 > 0) {
+                      modItems.push({
+                        text: `Drupal 10 (EOL Nov '26): ${b.drupal10}/6`,
+                        tooltip: 'Drupal 10: 6/6 pts (Compatible with Drupal 10; reaches End of Life in November 2026)'
+                      });
+                    }
+                    modItems.push({
+                      text: `${b.phpLabel || 'PHP 8.3+'}: ${b.modernPhp}/2`,
+                      tooltip: `${b.phpLabel || 'PHP 8.3+'}: ${b.modernPhp}/2 pts (Minimum tested PHP runtime)`
+                    });
+                    return modItems;
+                  })()
                 )}
                 ${this.renderPillarRow(
                   icons.flask({ size: 14, color: '#0891b2' }),
                   'Code Quality & CI',
                   evalData.pillars.quality.score,
                   15,
-                  `GitLab CI: ${evalData.pillars.quality.breakdown.pipeline}/10 (${rawData.gitlabPipelineStatus || 'unknown'}) · Tests: ${evalData.pillars.quality.breakdown.tests}/5`
+                  [
+                    {
+                      text: `GitLab CI: ${evalData.pillars.quality.breakdown.pipeline}/10`,
+                      tooltip: `GitLab CI Pipeline: ${evalData.pillars.quality.breakdown.pipeline}/10 pts (Pipeline status: ${rawData.gitlabPipelineStatus || 'unknown'})`
+                    },
+                    {
+                      text: `Tests: ${evalData.pillars.quality.breakdown.tests}/5`,
+                      tooltip: evalData.pillars.quality.breakdown.tests >= 5
+                        ? 'Automated Test Suite: 5/5 pts (PHPUnit kernel/functional tests detected)'
+                        : 'Automated Test Suite: 2/5 pts (No automated tests detected)'
+                    }
+                  ]
                 )}
                 ${(() => {
                   const installCount = rawData.activeInstalls || 0;
@@ -256,7 +326,16 @@ class DropTrendsUI {
                     'Adoption & Community',
                     evalData.pillars.adoption.score,
                     15,
-                    `Installs: ${installLabel} (${evalData.pillars.adoption.breakdown.installs}/10) · ${maintLabel} (${evalData.pillars.adoption.breakdown.contributors}/5)`
+                    [
+                      {
+                        text: `Installs: ${installLabel} (${evalData.pillars.adoption.breakdown.installs}/10)`,
+                        tooltip: `Active Installations: ${evalData.pillars.adoption.breakdown.installs}/10 pts (${installCount.toLocaleString()} active reported sites)`
+                      },
+                      {
+                        text: `${maintLabel} (${evalData.pillars.adoption.breakdown.contributors}/5)`,
+                        tooltip: `Maintainers: ${evalData.pillars.adoption.breakdown.contributors}/5 pts (${maintCount} community maintainers)`
+                      }
+                    ]
                   );
                 })()}
               </div>
@@ -459,22 +538,39 @@ class DropTrendsUI {
     });
   }
 
-  static renderPillarRow(iconHtml, title, score, max, details) {
+  static renderPillarRow(iconHtml, title, score, max, itemsOrDetails, rowTooltip = '') {
     const pct = Math.min(100, Math.round((score / max) * 100));
+
+    let items = [];
+    if (Array.isArray(itemsOrDetails)) {
+      items = itemsOrDetails;
+    } else if (typeof itemsOrDetails === 'string') {
+      items = itemsOrDetails.split(' · ').map(s => {
+        const str = s.trim();
+        return { text: str, tooltip: str };
+      });
+    }
+
+    const fullRowTooltip = rowTooltip || `${title}: ${score}/${max} pts (${items.map(i => i.tooltip || i.text).join(' · ')})`;
+
     return `
-      <div class="dt-scorecard-row">
-        <div class="dt-sc-left">
-          <span class="dt-sc-icon">${iconHtml}</span>
-          <div class="dt-sc-text">
+      <div class="dt-scorecard-row" title="${this.escapeHTML(fullRowTooltip)}">
+        <div class="dt-sc-header-row">
+          <div class="dt-sc-title-group">
+            <span class="dt-sc-icon">${iconHtml}</span>
             <span class="dt-sc-title">${this.escapeHTML(title)}</span>
-            <span class="dt-sc-details">${this.escapeHTML(details)}</span>
+          </div>
+          <div class="dt-sc-right">
+            <div class="dt-sc-bar-track">
+              <div class="dt-sc-bar-fill" style="width: ${pct}%"></div>
+            </div>
+            <span class="dt-sc-score"><strong>${score}</strong><span class="dt-sc-denom">/${max}</span></span>
           </div>
         </div>
-        <div class="dt-sc-right">
-          <div class="dt-sc-bar-track">
-            <div class="dt-sc-bar-fill" style="width: ${pct}%"></div>
-          </div>
-          <span class="dt-sc-score"><strong>${score}</strong><span class="dt-sc-denom">/${max}</span></span>
+        <div class="dt-sc-details-row">
+          ${items.map(item => `
+            <span class="dt-sc-item" title="${this.escapeHTML(item.tooltip || item.text)}">${this.escapeHTML(item.text)}</span>
+          `).join('')}
         </div>
       </div>
     `;
@@ -965,21 +1061,30 @@ class DropTrendsUI {
       }
       .dt-scorecard-row {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 6px 12px;
+        flex-direction: column;
+        padding: 7px 12px 8px;
         border-bottom: 1px solid #f1f5f9;
-        gap: 10px;
+        gap: 5px;
         flex-shrink: 0;
+        transition: background 0.15s ease;
+      }
+      .dt-scorecard-row:hover {
+        background: #f8fafc;
       }
       .dt-scorecard-row:last-child {
         border-bottom: none;
       }
-      .dt-sc-left {
+      .dt-sc-header-row {
         display: flex;
         align-items: center;
+        justify-content: space-between;
+        width: 100%;
         gap: 8px;
-        flex: 1;
+      }
+      .dt-sc-title-group {
+        display: flex;
+        align-items: center;
+        gap: 7px;
         min-width: 0;
       }
       .dt-sc-icon {
@@ -987,23 +1092,11 @@ class DropTrendsUI {
         display: flex;
         align-items: center;
       }
-      .dt-sc-text {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-      }
       .dt-sc-title {
         font-size: 12px;
-        font-weight: 600;
+        font-weight: 700;
         color: #1e293b;
         line-height: 1.2;
-      }
-      .dt-sc-details {
-        font-size: 10.5px;
-        color: #64748b;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
       }
       .dt-sc-right {
         display: flex;
@@ -1012,9 +1105,10 @@ class DropTrendsUI {
         flex-shrink: 0;
       }
       .dt-sc-bar-track {
-        width: 60px;
+        width: 55px;
         height: 5px;
         background: #f1f5f9;
+        border: 1px solid #e2e8f0;
         border-radius: 9999px;
         overflow: hidden;
       }
@@ -1028,10 +1122,36 @@ class DropTrendsUI {
         color: #1e293b;
         min-width: 36px;
         text-align: right;
+        font-variant-numeric: tabular-nums;
       }
       .dt-sc-denom {
         font-size: 10px;
         color: #94a3b8;
+      }
+      .dt-sc-details-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px 6px;
+        padding-left: 21px;
+      }
+      .dt-sc-item {
+        display: inline-flex;
+        align-items: center;
+        padding: 1.5px 6px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        font-size: 10.5px;
+        color: #475569;
+        line-height: 1.35;
+        cursor: help;
+        transition: all 0.12s ease;
+      }
+      .dt-sc-item:hover {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #1d4ed8;
       }
 
       /* Sections */
