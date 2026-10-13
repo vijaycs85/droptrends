@@ -1936,20 +1936,31 @@ class DropTrendsUI {
 
       /* Drawer Footer */
       .dt-drawer-footer {
-        padding: 6px 16px;
+        height: 24px;
+        min-height: 24px;
+        max-height: 24px;
+        padding: 0 12px;
         border-top: 1px solid #e2e8f0;
         background: #f8fafc;
         display: flex;
         justify-content: center;
         align-items: center;
-        font-size: 10.5px;
+        font-size: 10px;
+        line-height: 1;
         color: #64748b;
         flex-shrink: 0;
+      }
+      .dt-drawer-footer span {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        line-height: 1;
       }
       .dt-author-link {
         color: #0284c7;
         text-decoration: none;
         font-weight: 600;
+        line-height: 1;
       }
       .dt-author-link:hover {
         text-decoration: underline;
