@@ -172,14 +172,22 @@ class DropTrendsUI {
                 </div>
               </div>
 
-              <!-- Dedicated Score Lockup Pill -->
-              <div class="dt-score-pill-card" style="border-color: ${evalData.gradeColor}">
-                <div class="dt-score-digits">
-                  <span class="dt-score-big" style="color: ${evalData.gradeColor}">${evalData.score}</span>
-                  <span class="dt-score-denom">/100</span>
+              <!-- Lighthouse Hero Score Circle Lockup -->
+              <div class="dt-hero-score-lockup" title="DropScore: ${evalData.score}/100 (${evalData.gradeLabel})">
+                <div class="dt-hero-gauge-dial">
+                  <svg class="dt-hero-gauge-svg" width="54" height="54" viewBox="0 0 54 54">
+                    <circle cx="27" cy="27" r="23" fill="#ffffff" stroke="#e2e8f0" stroke-width="4"></circle>
+                    <circle cx="27" cy="27" r="23" fill="transparent" stroke="${evalData.gradeColor}" stroke-width="4"
+                      stroke-dasharray="144.51"
+                      stroke-dashoffset="${(144.51 * (1 - Math.min(100, Math.max(0, evalData.score)) / 100)).toFixed(2)}"
+                      stroke-linecap="round"
+                      transform="rotate(-90 27 27)">
+                    </circle>
+                  </svg>
+                  <span class="dt-hero-score-val" style="color: ${evalData.gradeColor}">${evalData.score}</span>
                 </div>
                 <div class="dt-grade-chip" style="background-color: ${evalData.gradeColor}">
-                  ${evalData.isEmergingProject ? `${icons.sprout({ size: 11, color: '#ffffff' })} ` : ''}${evalData.gradeLabel}
+                  ${evalData.isEmergingProject ? `${icons.sprout({ size: 10, color: '#ffffff' })} ` : ''}${evalData.gradeLabel}
                 </div>
               </div>
             </div>
@@ -1229,43 +1237,50 @@ class DropTrendsUI {
         font-weight: 600;
       }
 
-      /* Score Lockup Card */
-      .dt-score-pill-card {
+      /* Lighthouse Hero Score Circle Lockup */
+      .dt-hero-score-lockup {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+        user-select: none;
+      }
+      .dt-hero-gauge-dial {
+        position: relative;
+        width: 54px;
+        height: 54px;
         display: flex;
         align-items: center;
-        gap: 6px;
-        background: #ffffff;
-        border: 1.5px solid #cbd5e1;
+        justify-content: center;
         border-radius: 9999px;
-        padding: 3px 8px 3px 10px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-        flex-shrink: 0;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
       }
-      .dt-score-digits {
-        display: flex;
-        align-items: baseline;
+      .dt-hero-gauge-svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        border-radius: 9999px;
       }
-      .dt-score-big {
-        font-size: 18px;
+      .dt-hero-score-val {
+        font-size: 19px;
         font-weight: 900;
         line-height: 1;
-      }
-      .dt-score-denom {
-        font-size: 10px;
-        color: #94a3b8;
-        font-weight: 600;
+        z-index: 1;
+        letter-spacing: -0.02em;
       }
       .dt-grade-chip {
         color: #ffffff;
-        font-size: 10.5px;
+        font-size: 10px;
         font-weight: 700;
-        padding: 2.5px 8px;
+        padding: 1.5px 8px;
         border-radius: 9999px;
         line-height: 1.2;
         white-space: nowrap;
         display: inline-flex;
         align-items: center;
         gap: 3px;
+        letter-spacing: 0.01em;
       }
 
       /* Integrated Action & Release Strip */
