@@ -228,8 +228,8 @@ class DropTrendsUI {
           <!-- Top Lighthouse Category Gauges Overview -->
           <div class="dt-lighthouse-bar">
             ${DropTrendsUI.renderLighthouseGauge(evalData.pillars.security.score, 25, 'Security', 'dt-pillar-sec')}
-            ${DropTrendsUI.renderLighthouseGauge(evalData.pillars.modernity.score, 20, 'Modernity', 'dt-pillar-mod')}
             ${DropTrendsUI.renderLighthouseGauge(evalData.pillars.maintenance.score, 25, 'Velocity', 'dt-pillar-maint')}
+            ${DropTrendsUI.renderLighthouseGauge(evalData.pillars.modernity.score, 20, 'Modernity', 'dt-pillar-mod')}
             ${DropTrendsUI.renderLighthouseGauge(evalData.pillars.quality.score, 15, 'Quality', 'dt-pillar-qual')}
             ${DropTrendsUI.renderLighthouseGauge(evalData.pillars.adoption.score, 15, 'Community', 'dt-pillar-adopt')}
           </div>
