@@ -1,92 +1,149 @@
-# Chrome Web Store Listing: DropTrends (DropScore for Drupal)
+# Chrome Web Store Listing — DropTrends
 
-Last Updated: 2026-10-13
-
----
-
-## 1. Store Listing Metadata
-
-### Extension Name
-**DropTrends: Drupal Module Health & DropScore**
-
-### Short Description (max 132 characters)
-Instant DropScore health ratings (0-100), Drupal 11 compatibility checks, and security insights directly on Drupal.org project pages.
-
-### Category
-**Developer Tools**
-
-### Primary Language
-**English**
-
-### Detailed Description
-
-Evaluate Drupal modules with confidence. **DropTrends** brings objective, instant health ratings—the **DropScore™** (0–100)—directly inside Drupal.org module pages.
-
-Say goodbye to decision paralysis and manually scanning through release tables, issue queues, security advisory shields, and compatibility notes. DropTrends automatically evaluates every module across five objective pillars:
-
-🛡️ **Security & Trust (25 pts)**
-Instantly view Drupal Security Advisory policy coverage (shield status) and maintainer track records.
-
-⚡ **Maintenance & Velocity (25 pts)**
-Track commit and release recency, maintenance status tags, and issue queue velocity so you avoid abandoned modules.
-
-🚀 **Modernity & Compatibility (20 pts)**
-Identify Drupal 11 and Drupal 10 readiness at a glance, plus modern PHP 8.2+ compatibility.
-
-🧪 **Code Quality & CI (15 pts)**
-See automated GitLab CI test pipeline status and test suite coverage before installing.
-
-📈 **Adoption & Community (15 pts)**
-Evaluate real-world adoption through reported active installation numbers, contributor breadth, and sponsoring organizations.
-
-### Key Features:
-- **Instant Health Pill**: Displays the overall score and letter grade (A+ through F) beside the module title.
-- **Interactive Breakdown Drawer**: Click the badge to reveal in-depth pillar breakdowns, strengths, and risk warnings.
-- **One-Click Composer Command**: Copy `composer require drupal/<module>` directly from the drawer.
-- **Zero Configuration & Zero Lag**: Runs client-side for immediate results without waiting on backend servers.
-- **Privacy First**: Does not track browsing habits or collect any personal data.
+> Last Updated: 2026-10-13
 
 ---
 
-## 2. Permissions Justification
+## 1. Store Listing
 
-| Permission / Host Permission | Why It Is Needed |
-| :--- | :--- |
-| `storage` | Saves user preferences locally, including preferred badge position and UI display mode. No personal data is stored. |
-| `activeTab` | Enables the toolbar popup to read the current tab URL to detect if the user is viewing a Drupal.org project page. |
-| `https://*.drupal.org/*` | Necessary to inject the DropScore health pill and read publicly displayed module metadata on Drupal.org project pages (`drupal.org/project/*`). |
-| `https://git.drupalcode.org/*` | Used solely to fetch publicly displayed GitLab CI pipeline status badges for Drupal modules to calculate automated test passing rates. |
+### Extension Name [REQUIRED]
+<!-- Must match manifest.json "name". Max 75 characters. (Current: 47 chars) -->
+DropTrends: Drupal Module Health & DropScore
+
+### Short Description [REQUIRED]
+<!-- Max 132 characters. Shown in search results and tiles. (Current: 120 chars) -->
+Instant DropScore health ratings (0-100), Drupal 11 compatibility checks, and security insights directly on Drupal.org.
+
+### Detailed Description [REQUIRED]
+<!-- Max 16,000 characters. Formatted for Chrome Web Store plain text display. -->
+Evaluate Drupal modules with confidence. DropTrends brings objective, real-time health ratings—the DropScore (0–100)—directly onto Drupal.org project pages.
+
+Stop guessing whether a contributed module is maintained, secure, or ready for Drupal 11. DropTrends automatically evaluates every module across five objective pillars:
+
+• Security & Trust (25 pts): View Drupal Security Advisory coverage (shield verification) and maintainer track records at a glance.
+• Maintenance & Velocity (25 pts): Track release recency, commit momentum, maintenance status tags, and issue queue activity so you avoid abandoned projects.
+• Modernity & Compatibility (20 pts): Instantly identify Drupal 11 and Drupal 10 readiness, recipe compatibility, and modern PHP 8.2+ support.
+• Code Quality & CI (15 pts): See automated GitLab CI test pipeline status and test suite passing signals directly under each release.
+• Adoption & Community (15 pts): Evaluate real-world adoption through active site installs, contributor breadth, and supporting organizations.
+
+KEY FEATURES
+• Instant DropScore Pill: Displays the overall score (0–100) and sentiment status (Exceptional, Strong, Moderate, Needs Review, Emerging) directly beside the project title.
+• Multi-Release Selector: Easily toggle between releases (e.g., 6.3.x vs 6.2.x, or stable vs next-gen beta) to see compatibility, Composer commands, and health metrics for each branch.
+• Slide-Out Detail Drawer: Click any pill to view full pillar point breakdowns, automated risk warnings, and architect recommendations.
+• One-Click Composer Command: Copy the exact composer require command for any selected release with a single click.
+• Zero Configuration: Works automatically on any canonical Drupal.org project page without setup or accounts.
+• Privacy-First: Operates locally on your device with no trackers, no user analytics, and no external data transmission.
+
+HOW TO USE
+1. Install DropTrends from the Chrome Web Store.
+2. Visit any project page on Drupal.org (for example: drupal.org/project/token or drupal.org/project/webform).
+3. Look for the DropScore pill next to the project title for an immediate rating.
+4. Click the pill to open the comprehensive breakdown drawer.
+5. Click the extension toolbar icon at any time for quick access to your recently inspected module.
+
+PRIVACY & SECURITY
+DropTrends respects your privacy. All evaluations are performed locally inside your browser from publicly available Drupal.org page data. We do not collect, store, or sell personal data or browsing history.
+
+SUPPORT & OPEN SOURCE
+DropTrends is free, open source, and built for the Drupal community.
+GitHub: https://github.com/vijaycs85/droptrends
+Issue Tracker: https://github.com/vijaycs85/droptrends/issues
+
+### Category [REQUIRED]
+Developer Tools
+
+### Single Purpose [REQUIRED]
+Evaluates Drupal project health, Drupal 11 compatibility, and security coverage with an instant 0–100 DropScore rating directly on Drupal.org.
+
+### Primary Language [REQUIRED]
+English
 
 ---
 
-## 3. Privacy & Data Use Disclosures
+## 2. Graphics & Assets
 
-### Single Purpose Description
-DropTrends displays objective module health scores and compatibility information on Drupal.org project pages to help developers choose maintained and secure modules.
+| Asset | Dimensions | Status | Filename / Path |
+| :--- | :--- | :--- | :--- |
+| Store Icon [REQUIRED] | 128×128 PNG | ✅ Ready | `extension/icons/icon-128.png` |
+| Screenshot 1 [REQUIRED] | 1280×800 PNG | 🟡 Needs capture | Showing on-page DropScore pill & open detail drawer on Drupal.org |
+| Screenshot 2 [RECOMMENDED] | 1280×800 PNG | 🟡 Needs capture | Showing multi-release selector and Composer command copy |
+| Screenshot 3 [RECOMMENDED] | 1280×800 PNG | 🟡 Needs capture | Showing toolbar popup overview |
+| Small Promo Tile [RECOMMENDED] | 440×280 PNG | 🟡 Optional | Promotional graphic for Chrome Web Store search card |
+| Marquee Promo Tile | 1400×560 PNG | 🟡 Optional | Hero banner for featured placements |
 
-### Data Collection & Usage Disclosures
-- **Personally Identifiable Information**: DropTrends does NOT collect names, emails, credentials, or user identifiers.
-- **User Activity & History**: DropTrends does NOT track user browsing history, search terms, or IP addresses.
-- **Third-Party Data Sharing**: No data is sold, monetized, or shared with third parties.
-- **Website Content**: Only publicly available open-source module metadata visible on Drupal.org project pages is parsed locally on the client.
-
----
-
-## 4. Assets & Store Requirements
-
-- [x] Extension Icons: `icon-16.png`, `icon-32.png`, `icon-48.png`, `icon-128.png`
-- [ ] Store Promo Marquee (440×280 px)
-- [ ] Store Screenshots (1280×800 px)
-- [x] Privacy Policy Document
+### Screenshot Guidance for Developer:
+- **Screenshot 1 (Main View)**: Open `https://www.drupal.org/project/token` in Chrome. Click the DropScore pill to open the drawer. Take a browser screenshot sized 1280×800 showing the page and the drawer.
+- **Screenshot 2 (Multi-Release View)**: Open `https://www.drupal.org/project/webform` or `flowdrop`. Show the release pill selector switching between versions.
+- **Screenshot 3 (Toolbar Popup)**: Click the DropTrends extension icon in the Chrome toolbar. Capture the popup display.
 
 ---
 
-## 5. Version History
+## 3. Permissions Justification
+
+<!-- Copy-paste these exact justifications into the Chrome Developer Dashboard form: -->
+
+| Permission / Host | Type | Justification for Chrome Review Team |
+| :--- | :--- | :--- |
+| `storage` | permissions | Stores user UI preferences locally (such as inline pill display toggles) and caches recently inspected module scores on-device for fast toolbar popup rendering. No personal data is stored. |
+| `activeTab` | permissions | Allows the extension toolbar popup to inspect the active tab's URL upon user click to detect whether the user is on a Drupal.org project page and display the matching DropScore card. |
+| `*://*.drupal.org/*` | host_permissions | Required to inject the DropScore health badge and read publicly displayed module metadata (releases, maintenance status, issue counts) directly on canonical Drupal.org project pages. |
+| `*://git.drupalcode.org/*` | host_permissions | Required to query official public GitLab CI pipeline status endpoints (git.drupalcode.org/api/v4/projects/.../pipelines/latest) to display automated test passing status in the code quality evaluation. |
+
+---
+
+## 4. Privacy & Data Use Disclosure
+
+<!-- These map directly to the Chrome Web Store Developer Dashboard "Privacy" tab: -->
+
+### Data Collection
+**Does the extension collect user data?** No
+
+| Data Type | Collected? | Transmitted Off-Device? |
+| :--- | :--- | :--- |
+| Personally identifiable info | No | No |
+| Health info | No | No |
+| Financial info | No | No |
+| Authentication info | No | No |
+| Personal communications | No | No |
+| Location | No | No |
+| Web history | No | No |
+| User activity | No | No |
+| Website content | No (Parsed locally in-memory only) | No |
+
+### Data Use Certification
+- [x] Data is NOT sold to third parties.
+- [x] Data is NOT used for purposes unrelated to the extension's core functionality.
+- [x] Data is NOT used for creditworthiness or lending purposes.
+
+---
+
+## 5. Privacy Policy
+
+**Privacy Policy URL [REQUIRED]**:
+`https://github.com/vijaycs85/droptrends/blob/1.x/PRIVACY.md`
+
+*(Raw fallback URL: `https://raw.githubusercontent.com/vijaycs85/droptrends/1.x/PRIVACY.md`)*
+
+---
+
+## 6. Distribution & Developer Info
+
+- **Visibility**: Public
+- **Regions**: All regions
+- **Publisher Name**: DropTrends Team
+- **Support URL**: `https://github.com/vijaycs85/droptrends/issues`
+- **Homepage URL**: `https://github.com/vijaycs85/droptrends`
+
+---
+
+## 7. Version History
 
 ### Version 1.0.0 (2026-10-13)
-- Initial release.
-- Client-side DOM parsing on `drupal.org/project/*` pages.
-- 5-Pillar DropScore algorithm (0–100) with letter grades (A+ to F).
+- Initial Chrome Web Store release.
+- Client-side DOM parsing on canonical `drupal.org/project/*` pages.
+- 5-Pillar DropScore algorithm (0–100) with calibrated sentiment labels (Exceptional, Strong, Moderate, Needs Review, Emerging).
+- Multi-release comparison: switch between stable and development/pre-releases with dynamic Composer commands.
+- Security advisory policy verification with shield badge detection.
+- Real-time GitLab CI pipeline status detection via on-page DOM and GitLab API.
 - Isolated Shadow DOM UI overlay: Health Pill & Interactive Breakdown Drawer.
-- GitLab CI pipeline status detection.
-- Quick toolbar popup with module search and settings.
+- Fast toolbar popup for quick access to inspected modules.
