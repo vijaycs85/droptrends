@@ -679,6 +679,7 @@ class DropScoreEngine {
       disqualificationReason,
       disclaimer,
       activeVersion: effectiveData.activeVersion,
+      lastReleaseDaysAgo: (typeof effectiveData.lastReleaseDaysAgo === 'number') ? effectiveData.lastReleaseDaysAgo : null,
       isEmergingProject: effectiveData.isEmergingProject,
       pillars: {
         security: {

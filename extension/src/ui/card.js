@@ -262,11 +262,21 @@ class DropTrendsUI {
                   [
                     {
                       text: `Status: ${evalData.pillars.maintenance.breakdown.statusLabel || 'Active'} (${evalData.pillars.maintenance.breakdown.status}/10)`,
-                      tooltip: `Maintenance Status Taxonomy: ${evalData.pillars.maintenance.breakdown.statusLabel || 'Active'} (${evalData.pillars.maintenance.breakdown.status}/10 pts)`
+                      tooltip: `Maintenance Status: ${evalData.pillars.maintenance.breakdown.statusLabel || 'Active'} (${evalData.pillars.maintenance.breakdown.status}/10 pts)`
                     },
                     {
                       text: `Recency: ${evalData.pillars.maintenance.breakdown.recency}/8`,
-                      tooltip: `Release Recency: ${evalData.pillars.maintenance.breakdown.recency}/8 pts (Active release ${evalData.activeVersion}${evalData.lastReleaseDaysAgo !== null ? `, published ${evalData.lastReleaseDaysAgo} days ago` : ''})`
+                      tooltip: (() => {
+                        const relDaysAgo = (activeRel && typeof activeRel.daysAgo === 'number')
+                          ? activeRel.daysAgo
+                          : ((typeof evalData.lastReleaseDaysAgo === 'number')
+                            ? evalData.lastReleaseDaysAgo
+                            : (typeof rawData.lastReleaseDaysAgo === 'number' ? rawData.lastReleaseDaysAgo : null));
+                        const daysText = (relDaysAgo !== null && typeof relDaysAgo === 'number' && !isNaN(relDaysAgo))
+                          ? (relDaysAgo === 0 ? ', published today' : `, published ${relDaysAgo} days ago`)
+                          : '';
+                        return `Release Recency: ${evalData.pillars.maintenance.breakdown.recency}/8 pts (Active release ${evalData.activeVersion || selectedVer || 'latest'}${daysText})`;
+                      })()
                     },
                     {
                       text: `Queue: ${evalData.pillars.maintenance.breakdown.issues}/7`,
@@ -405,7 +415,7 @@ class DropTrendsUI {
 
           <!-- Drawer Footer -->
           <div class="dt-drawer-footer">
-            <span>DropTrends™ · Drupal Intelligence</span>
+            <span>Made with ❤️ by <a href="https://www.drupal.org/u/vijaycs85" target="_blank" rel="noopener" style="color: #0284c7; text-decoration: none; font-weight: 600;">vijaycs85</a></span>
             <a href="https://git.drupalcode.org/project/${encodeURIComponent(rawData.machineName)}" target="_blank" rel="noopener" class="dt-repo-link">
               <span>GitLab Repo</span>
               ${icons.externalLink({ size: 11, color: '#0284c7' })}

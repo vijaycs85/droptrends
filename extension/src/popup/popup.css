@@ -311,7 +311,7 @@ body {
 /* Footer */
 .dt-popup-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 10px 16px;
   border-top: 1px solid var(--border);
