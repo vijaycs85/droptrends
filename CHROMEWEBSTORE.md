@@ -1,6 +1,6 @@
 # Chrome Web Store Listing — DropTrends
 
-> Last Updated: 2026-10-13
+> Last Updated: 2026-10-14
 
 ---
 
@@ -141,6 +141,18 @@ English
 ---
 
 ## 7. Version History
+
+### Version 1.1.0 (2026-10-14)
+- Redesigned visual identity: official Drupal drop geometry with score spectrum bars and updated icons.
+- Lighthouse-inspired scorecard UI: interactive circular hero score gauge, category meters with grade chips, and auto-scrolling insights.
+- Calibrated DropScore algorithm:
+  - Enhanced issue queue scoring with bonuses for Inbox Zero and pristine zero-bug queues.
+  - Recalibrated release velocity ladders (widened 90-day grace window) and adoption point ladders.
+  - Strict disqualification (score 0) and warning disclaimers for obsolete, unsupported, and revoked projects.
+  - Forward-compatibility engine: Drupal 12 readiness support, dynamic core schedules, PHP 8.5+ baseline, and Drupal 10 EOL alerts.
+- High-density slide drawer UX with ultra-compact 24px micro-bar footer and direct GitLab repository navigation.
+- Toolbar popup enhancements: circular gauge dial and grade chip lockup matching the on-page drawer.
+- Firefox Manifest V3 cross-browser packaging support.
 
 ### Version 1.0.0 (2026-10-13)
 - Initial Chrome Web Store release.
