@@ -1,5 +1,5 @@
 /**
- * DropScore™ Evaluation Engine v1.3
+ * DropScore Evaluation Engine v1.3
  * Evaluates Drupal module signals across 5 weighted pillars.
  * Focuses on a clean 0-100 numerical score with objective sentiment labels (no A/B/C/D letter grades)
  * and properly prioritizes stable releases over pre-release alphas/betas.

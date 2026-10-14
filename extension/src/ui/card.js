@@ -477,6 +477,8 @@ class DropTrendsUI {
           <!-- Drawer Footer -->
           <div class="dt-drawer-footer">
             <span>Made with ❤️ by <a href="https://www.drupal.org/u/vijaycs85" target="_blank" rel="noopener" class="dt-author-link">vijaycs85</a></span>
+            <span class="dt-meta-sep" style="margin: 0 4px;">·</span>
+            <a href="https://www.drupaldroptrends.com" target="_blank" rel="noopener" class="dt-author-link" style="font-weight: 600; color: #0284c7;">drupaldroptrends.com</a>
           </div>
         </div>
       `;

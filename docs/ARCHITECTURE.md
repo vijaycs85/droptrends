@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-**DropTrends (DropScore)** is an open ecosystem analytics platform and browser extension for Drupal modules. It provides Drupal site builders, architects, and technical decision-makers with an instant, objective health rating (the **DropScore™**, 0–100) directly on `drupal.org/project/*` pages.
+**DropTrends (DropScore)** is an open ecosystem analytics platform and browser extension for Drupal modules. It provides Drupal site builders, architects, and technical decision-makers with an instant, objective health rating (the **DropScore**, 0–100) directly on `drupal.org/project/*` pages.
 
 Historically, evaluating Drupal modules requires manually scanning fragmented page elements:
 - Security advisory shield coverage
@@ -22,7 +22,7 @@ DropTrends automates this evaluation instantaneously directly inside the user's 
 ```
 Phase 1: Browser Extension (Zero-Infrastructure MVP)  <-- CURRENT PHASE
 ├── Client-side DOM Extraction (instant, 0 ms network latency)
-├── Client-side DropScore™ Engine (pure JavaScript)
+├── Client-side DropScore Engine (pure JavaScript)
 ├── Isolated Shadow DOM UI (Health Pill + Interactive Breakdown Card)
 ├── Optional Asynchronous Enrichment (GitLab CI badge & Drupal.org API)
 └── Extension Popup (Quick Search & Config)

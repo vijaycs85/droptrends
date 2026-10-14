@@ -1,14 +1,14 @@
-# DropScore™ Algorithm Specification (v1.0)
+# DropScore Algorithm Specification (v1.0)
 
 ## 1. Overview & Objective
 
-The **DropScore™** is an objective, normalized metric on a scale from **0 to 100** designed to quantify the health, reliability, security posture, and ecosystem readiness of any Drupal contributed project.
+The **DropScore** is an objective, normalized metric on a scale from **0 to 100** designed to quantify the health, reliability, security posture, and ecosystem readiness of any Drupal contributed project.
 
 It synthesizes multiple disparate signals into 5 weighted pillars:
 
 ```
 ┌───────────────────────────────────────────────────────────┐
-│                     DropScore™ (0 - 100)                  │
+│                     DropScore (0 - 100)                  │
 ├───────────────────────────────┬───────────────────────────┤
 │ Pillar                        │ Maximum Points            │
 ├───────────────────────────────┼───────────────────────────┤

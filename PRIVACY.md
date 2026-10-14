@@ -1,6 +1,7 @@
 # Privacy Policy for DropTrends
 
-Last updated: October 13, 2026
+Last updated: October 14, 2026  
+Official Hosted Version: [https://www.drupaldroptrends.com/privacy](https://www.drupaldroptrends.com/privacy)
 
 DropTrends ("the extension") is an open-source browser extension designed to provide objective project health ratings, compatibility insights, and security indicators directly on Drupal.org project pages.
 

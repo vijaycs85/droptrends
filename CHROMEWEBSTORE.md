@@ -124,19 +124,20 @@ English
 ## 5. Privacy Policy
 
 **Privacy Policy URL [REQUIRED]**:
-`https://github.com/vijaycs85/droptrends/blob/1.x/PRIVACY.md`
+`https://www.drupaldroptrends.com/privacy`
 
-*(Raw fallback URL: `https://raw.githubusercontent.com/vijaycs85/droptrends/1.x/PRIVACY.md`)*
+*(Fallback repo URL: `https://github.com/vijaycs85/droptrends/blob/1.x/PRIVACY.md`)*
 
 ---
 
 ## 6. Distribution & Developer Info
 
+- **Store Listing URL**: `https://chromewebstore.google.com/detail/mbgbbpappbamimibipcbehnjchpplcip`
 - **Visibility**: Public
 - **Regions**: All regions
 - **Publisher Name**: DropTrends Team
 - **Support URL**: `https://github.com/vijaycs85/droptrends/issues`
-- **Homepage URL**: `https://github.com/vijaycs85/droptrends`
+- **Homepage URL**: `https://www.drupaldroptrends.com`
 
 ---
 

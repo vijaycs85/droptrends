@@ -2,6 +2,11 @@
 
 > Intelligent health ratings, quality metrics, and discoverability for the Drupal ecosystem.
 
+[![Website](https://img.shields.io/badge/Website-drupaldroptrends.com-0096FF?style=flat-square)](https://www.drupaldroptrends.com)
+[![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-DropTrends-4285F4?style=flat-square&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/mbgbbpappbamimibipcbehnjchpplcip)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue?style=flat-square)](https://github.com/vijaycs85/droptrends/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+
 ## Vision
 
 Choosing Drupal modules today is plagued by decision paralysis: outdated modules, abandoned issue queues, and multiple competing options for the same feature. **DropTrends** introduces a standardized, objective evaluation standard—the **DropScore** (0–100)—and surfaces it directly inside Drupal.org via a lightweight browser extension and standalone comparison web app.
@@ -33,7 +38,7 @@ Phase 3: Web App & Ecosystem Trends
 
 ---
 
-## The DropScore™ Metric Formula (0–100)
+## The DropScore Metric Formula (0–100)
 
 DropScore grades modules across 5 objective pillars:
 
