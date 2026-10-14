@@ -51,7 +51,7 @@ DropScore grades modules across 5 objective pillars:
 
 ```
 droptrends/
-├── docs/                 # Architecture, scoring algorithm specs, data dictionary
+├── docs/                 # Architecture, scoring algorithm specs, release guide
 ├── extension/            # Chrome & Firefox Browser Extension (Manifest V3)
 │   ├── manifest.json
 │   ├── src/
@@ -61,3 +61,33 @@ droptrends/
 │   │   └── ui/           # Badges, overlays, and modal views
 └── README.md
 ```
+
+---
+
+## Development & Release Workflow
+
+### Running Tests
+```bash
+pnpm test
+```
+
+### Packaging Manually
+```bash
+pnpm package
+```
+
+### Creating a New Release
+DropTrends features an automated release command that synchronizes versions across `package.json`, browser manifests, popup badges, and `CHROMEWEBSTORE.md`, runs the test suite, re-packages distribution archives, and creates a tagged git commit:
+
+```bash
+# Preview changes with dry-run
+pnpm release patch --dry-run
+
+# Cut a new release
+pnpm release patch    # 1.1.0 -> 1.1.1
+pnpm release minor    # 1.1.0 -> 1.2.0
+pnpm release major    # 1.1.0 -> 2.0.0
+```
+
+For detailed publishing instructions and Chrome Web Store guidelines, see the **[Release Process Guide](docs/RELEASE_PROCESS.md)**.
+
