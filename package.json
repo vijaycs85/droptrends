@@ -7,7 +7,8 @@
     "test": "node --test tests/**/*.test.js",
     "generate-icons": "node scripts/generate-icons.js",
     "build": "pnpm generate-icons && node scripts/build.js",
-    "package": "pnpm build && node scripts/package-extension.js"
+    "package": "pnpm build && node scripts/package-extension.js",
+    "release": "node scripts/release.js"
   },
   "keywords": [
     "drupal",
