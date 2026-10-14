@@ -3,7 +3,7 @@
   "name": "DropTrends: Drupal Module Health & DropScore",
   "short_name": "DropTrends",
   "version": "1.1.0",
-  "description": "Instant DropScore health ratings (0-100), Drupal 11 compatibility checks, and security insights directly on Drupal.org.",
+  "description": "Instant DropScore health ratings (0-100), Drupal compatibility checks, and security insights directly on Drupal.org.",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",

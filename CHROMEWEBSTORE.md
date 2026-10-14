@@ -11,14 +11,14 @@
 DropTrends: Drupal Module Health & DropScore
 
 ### Short Description [REQUIRED]
-<!-- Max 132 characters. Shown in search results and tiles. (Current: 120 chars) -->
-Instant DropScore health ratings (0-100), Drupal 11 compatibility checks, and security insights directly on Drupal.org.
+<!-- Max 132 characters. Shown in search results and tiles. (Current: 108 chars) -->
+Instant DropScore health ratings (0-100), Drupal compatibility checks, and security insights directly on Drupal.org.
 
 ### Detailed Description [REQUIRED]
 <!-- Max 16,000 characters. Formatted for Chrome Web Store plain text display. -->
 Evaluate Drupal modules with confidence. DropTrends brings objective, real-time health ratings—the DropScore (0–100)—directly onto Drupal.org project pages.
 
-Stop guessing whether a contributed module is maintained, secure, or ready for Drupal 11. DropTrends automatically evaluates every module across five objective pillars:
+Stop guessing whether a contributed module is maintained, secure, or ready for Drupal. DropTrends automatically evaluates every module across five objective pillars:
 
 • Security & Trust (25 pts): View Drupal Security Advisory coverage (shield verification) and maintainer track records at a glance.
 • Maintenance & Velocity (25 pts): Track release recency, commit momentum, maintenance status tags, and issue queue activity so you avoid abandoned projects.
@@ -53,7 +53,7 @@ Issue Tracker: https://github.com/vijaycs85/droptrends/issues
 Developer Tools
 
 ### Single Purpose [REQUIRED]
-Evaluates Drupal project health, Drupal 11 compatibility, and security coverage with an instant 0–100 DropScore rating directly on Drupal.org.
+Evaluates Drupal project health, Drupal compatibility, and security coverage with an instant 0–100 DropScore rating directly on Drupal.org.
 
 ### Primary Language [REQUIRED]
 English
